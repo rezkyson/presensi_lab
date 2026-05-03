@@ -10,3 +10,36 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@layer base {
+    :focus-visible {
+        outline: 2px solid var(--color-emerald-600);
+        outline-offset: 2px;
+    }
+
+    button,
+    input,
+    select,
+    textarea,
+    a {
+        min-width: 0;
+    }
+}
+
+@layer components {
+    .touch-target {
+        min-height: 44px;
+    }
+
+    .empty-state {
+        @apply rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-6 text-sm text-zinc-500;
+    }
+
+    .status-error {
+        @apply rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800;
+    }
+
+    .status-success {
+        @apply rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800;
+    }
+}

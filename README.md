@@ -1,3 +1,35 @@
+# SiHadir
+
+SiHadir adalah sistem kehadiran digital untuk laboratorium/kuliah berbasis Laravel, Inertia, Vue, QR token, dan verifikasi wajah.
+
+## Dokumentasi Proyek
+
+- [PRD](local%20docs/prd.md)
+- [Task Breakdown](local%20docs/task.md)
+- [Setup Lokal](local%20docs/setup-lokal.md)
+- [Konfigurasi Production](local%20docs/production.md)
+- [QA Checklist](local%20docs/qa-checklist.md)
+
+## Verifikasi Cepat
+
+```bash
+php artisan test
+npm run build
+```
+
+## Akun Demo
+
+- Admin: `admin@sihadir.local` / `admin123`
+- Dosen: `rani@sihadir.local` / `password`
+- Dosen: `budi@sihadir.local` / `password`
+- Mahasiswa: NIM `2401010001` / `password`
+
+## Catatan
+
+Fitur kamera membutuhkan HTTPS atau localhost. Data foto wajah disimpan pada disk `local` dan tidak dipublikasikan langsung.
+
+<!-- Laravel default README below kept for framework reference. -->
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
