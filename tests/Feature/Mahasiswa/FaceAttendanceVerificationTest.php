@@ -42,6 +42,7 @@ class FaceAttendanceVerificationTest extends TestCase
             ->postJson('/mahasiswa/absen/verifikasi-wajah', [
                 'face_descriptor' => array_fill(0, 128, 0.25),
                 'client_distance' => 0,
+                'liveness' => $this->livenessPayload(),
             ])
             ->assertOk()
             ->assertJsonPath('message', 'Presensi berhasil dicatat.')
@@ -65,6 +66,7 @@ class FaceAttendanceVerificationTest extends TestCase
         $this->actingAs($user)
             ->postJson('/mahasiswa/absen/verifikasi-wajah', [
                 'face_descriptor' => array_fill(0, 128, 0.2),
+                'liveness' => $this->livenessPayload(),
             ])
             ->assertOk();
 
@@ -124,6 +126,34 @@ class FaceAttendanceVerificationTest extends TestCase
             ->assertJsonValidationErrors('face_descriptor');
     }
 
+    public function test_face_verification_requires_liveness_challenge(): void
+    {
+        [$user] = $this->createVerifiedQrSession(array_fill(0, 128, 0.2));
+
+        $this->actingAs($user)
+            ->postJson('/mahasiswa/absen/verifikasi-wajah', [
+                'face_descriptor' => array_fill(0, 128, 0.2),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Liveness detection belum valid. Ikuti instruksi kedip dan menoleh, lalu coba lagi.');
+    }
+
+    public function test_face_verification_rejects_stale_liveness_challenge(): void
+    {
+        [$user] = $this->createVerifiedQrSession(array_fill(0, 128, 0.2));
+        $staleLiveness = $this->livenessPayload();
+
+        CarbonImmutable::setTestNow('2026-05-04 08:01:00');
+
+        $this->actingAs($user)
+            ->postJson('/mahasiswa/absen/verifikasi-wajah', [
+                'face_descriptor' => array_fill(0, 128, 0.2),
+                'liveness' => $staleLiveness,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Liveness detection belum valid. Ikuti instruksi kedip dan menoleh, lalu coba lagi.');
+    }
+
     public function test_non_matching_face_descriptor_tracks_attempts_and_then_fails(): void
     {
         [$user] = $this->createVerifiedQrSession(array_fill(0, 128, 0.0));
@@ -132,6 +162,7 @@ class FaceAttendanceVerificationTest extends TestCase
         $this->actingAs($user)
             ->postJson('/mahasiswa/absen/verifikasi-wajah', [
                 'face_descriptor' => $descriptor,
+                'liveness' => $this->livenessPayload(),
             ])
             ->assertUnprocessable()
             ->assertJsonPath('attempts_remaining', 2);
@@ -139,6 +170,7 @@ class FaceAttendanceVerificationTest extends TestCase
         $this->actingAs($user)
             ->postJson('/mahasiswa/absen/verifikasi-wajah', [
                 'face_descriptor' => $descriptor,
+                'liveness' => $this->livenessPayload(),
             ])
             ->assertUnprocessable()
             ->assertJsonPath('attempts_remaining', 1);
@@ -146,6 +178,7 @@ class FaceAttendanceVerificationTest extends TestCase
         $this->actingAs($user)
             ->postJson('/mahasiswa/absen/verifikasi-wajah', [
                 'face_descriptor' => $descriptor,
+                'liveness' => $this->livenessPayload(),
             ])
             ->assertUnprocessable()
             ->assertJsonPath('attempts_remaining', 0)
@@ -164,6 +197,7 @@ class FaceAttendanceVerificationTest extends TestCase
             $this->actingAs($user)
                 ->postJson('/mahasiswa/absen/verifikasi-wajah', [
                     'face_descriptor' => array_fill(0, 128, 0.2),
+                    'liveness' => $this->livenessPayload(),
                 ]);
         }
 
@@ -268,8 +302,34 @@ class FaceAttendanceVerificationTest extends TestCase
                 'expires_at' => now()->addMinutes(5)->toIso8601String(),
                 'attempts' => 0,
             ],
+            'attendance_liveness' => $this->livenessChallenge(),
         ]);
 
         return [$user, $mahasiswa, $sesi, $token];
+    }
+
+    /**
+     * @return array{id: string, steps: array<int, string>, issued_at: string, expires_at: string}
+     */
+    private function livenessChallenge(): array
+    {
+        return [
+            'id' => 'test-liveness',
+            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'issued_at' => now()->toIso8601String(),
+            'expires_at' => now()->addMinutes(5)->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array{challenge_id: string, steps: array<int, string>, completed_at: string}
+     */
+    private function livenessPayload(): array
+    {
+        return [
+            'challenge_id' => 'test-liveness',
+            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'completed_at' => now()->toIso8601String(),
+        ];
     }
 }

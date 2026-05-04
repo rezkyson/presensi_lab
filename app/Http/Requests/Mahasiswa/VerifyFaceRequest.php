@@ -21,6 +21,11 @@ class VerifyFaceRequest extends FormRequest
             'face_descriptor' => ['required', 'array', 'size:128'],
             'face_descriptor.*' => ['required', 'numeric'],
             'client_distance' => ['nullable', 'numeric'],
+            'liveness' => ['nullable', 'array'],
+            'liveness.challenge_id' => ['nullable', 'string'],
+            'liveness.steps' => ['nullable', 'array'],
+            'liveness.steps.*' => ['string'],
+            'liveness.completed_at' => ['nullable', 'date'],
         ];
     }
 }

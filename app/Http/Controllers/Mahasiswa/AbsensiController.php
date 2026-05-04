@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,6 +28,8 @@ class AbsensiController extends Controller
     private const FACE_DESCRIPTOR_LENGTH = 128;
 
     private const MAX_FACE_ATTEMPTS = 3;
+
+    private const LIVENESS_STEPS = ['blink', 'turn_left', 'turn_right'];
 
     public function index(Request $request): Response
     {
@@ -134,6 +137,7 @@ class AbsensiController extends Controller
             'expires_at' => now()->addMinutes(5)->toIso8601String(),
             'attempts' => 0,
         ]);
+        $request->session()->forget('attendance_liveness');
 
         return response()->json([
             'message' => 'QR valid.',
@@ -160,6 +164,7 @@ class AbsensiController extends Controller
         $sesi = SesiAbsensi::query()
             ->with(['jadwal.kelas:id,nama_kelas,prodi', 'jadwal.dosen.user:id,name'])
             ->findOrFail($verification['sesi_id']);
+        $livenessChallenge = $this->createLivenessChallenge($request);
 
         return Inertia::render('Mahasiswa/Absen/VerifyFace', [
             'session' => $this->formatSession($sesi),
@@ -171,6 +176,7 @@ class AbsensiController extends Controller
                 'descriptorLength' => self::FACE_DESCRIPTOR_LENGTH,
                 'maxAttempts' => self::MAX_FACE_ATTEMPTS,
             ],
+            'livenessChallenge' => $livenessChallenge,
         ]);
     }
 
@@ -196,6 +202,7 @@ class AbsensiController extends Controller
 
         if ($sesi->status !== SesiAbsensi::STATUS_AKTIF || ! $sesi->tanggal?->isSameDay(CarbonImmutable::today())) {
             $request->session()->forget('attendance_qr');
+            $request->session()->forget('attendance_liveness');
             $this->logFailedAttendance($request, $mahasiswa, 'face_session_inactive', [
                 'sesi_id' => $sesi->id,
                 'status' => $sesi->status,
@@ -214,6 +221,7 @@ class AbsensiController extends Controller
 
         if ($alreadyPresent) {
             $request->session()->forget('attendance_qr');
+            $request->session()->forget('attendance_liveness');
             $this->logFailedAttendance($request, $mahasiswa, 'face_duplicate_attendance', [
                 'sesi_id' => $sesi->id,
             ]);
@@ -236,6 +244,16 @@ class AbsensiController extends Controller
             ], 422);
         }
 
+        if (! $this->hasValidLiveness($request, $data['liveness'] ?? null)) {
+            $this->logFailedAttendance($request, $mahasiswa, 'face_liveness_failed', [
+                'sesi_id' => $sesi->id,
+            ]);
+
+            return response()->json([
+                'message' => 'Liveness detection belum valid. Ikuti instruksi kedip dan menoleh, lalu coba lagi.',
+            ], 422);
+        }
+
         $distance = $this->euclideanDistance(
             array_map('floatval', $registeredDescriptor),
             array_map('floatval', $data['face_descriptor']),
@@ -254,6 +272,7 @@ class AbsensiController extends Controller
 
             if ($attempts >= self::MAX_FACE_ATTEMPTS) {
                 $request->session()->forget('attendance_qr');
+                $request->session()->forget('attendance_liveness');
                 $request->session()->put('attendance_failure', [
                     'message' => 'Verifikasi wajah gagal setelah beberapa percobaan.',
                     'distance' => round($distance, 4),
@@ -292,6 +311,7 @@ class AbsensiController extends Controller
         }
 
         $request->session()->forget('attendance_qr');
+        $request->session()->forget('attendance_liveness');
         $request->session()->put('attendance_success', [
             'presensi_id' => $presensi->id,
             'distance' => round($distance, 4),
@@ -355,9 +375,53 @@ class AbsensiController extends Controller
         return $verification;
     }
 
+    private function createLivenessChallenge(Request $request): array
+    {
+        $issuedAt = now();
+        $challenge = [
+            'id' => (string) Str::uuid(),
+            'steps' => self::LIVENESS_STEPS,
+            'issued_at' => $issuedAt->toIso8601String(),
+            'expires_at' => $issuedAt->copy()->addMinutes(5)->toIso8601String(),
+        ];
+
+        $request->session()->put('attendance_liveness', $challenge);
+
+        return $challenge;
+    }
+
+    private function hasValidLiveness(Request $request, mixed $payload): bool
+    {
+        $challenge = $request->session()->get('attendance_liveness');
+
+        if (! is_array($challenge) || ! is_array($payload)) {
+            return false;
+        }
+
+        if (! isset($payload['completed_at'], $challenge['issued_at'], $challenge['expires_at'])) {
+            return false;
+        }
+
+        try {
+            $completedAt = CarbonImmutable::parse($payload['completed_at']);
+            $issuedAt = CarbonImmutable::parse($challenge['issued_at']);
+            $expiresAt = CarbonImmutable::parse($challenge['expires_at']);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return ($payload['challenge_id'] ?? null) === ($challenge['id'] ?? null)
+            && array_values($payload['steps'] ?? []) === array_values($challenge['steps'] ?? [])
+            && $completedAt->greaterThanOrEqualTo($issuedAt)
+            && $completedAt->greaterThanOrEqualTo(now()->subSeconds(30))
+            && $completedAt->lessThanOrEqualTo(now()->addSeconds(10))
+            && $expiresAt->isFuture();
+    }
+
     private function expiredQrRedirect(Request $request): RedirectResponse
     {
         $request->session()->forget('attendance_qr');
+        $request->session()->forget('attendance_liveness');
 
         return redirect()
             ->route('mahasiswa.absen.index')

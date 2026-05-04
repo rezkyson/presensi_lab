@@ -82,9 +82,11 @@ class AttendanceLoadTest extends TestCase
                 ])
                 ->assertOk();
 
-            $this->actingAs($user)
+            $this->withSession(['attendance_liveness' => $this->livenessChallenge()])
+                ->actingAs($user)
                 ->postJson('/mahasiswa/absen/verifikasi-wajah', [
                     'face_descriptor' => $descriptor,
+                    'liveness' => $this->livenessPayload(),
                 ])
                 ->assertOk();
         }
@@ -104,5 +106,30 @@ class AttendanceLoadTest extends TestCase
             'sesi_id' => $token->sesi_id,
             'token' => $token->token,
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @return array{id: string, steps: array<int, string>, issued_at: string, expires_at: string}
+     */
+    private function livenessChallenge(): array
+    {
+        return [
+            'id' => 'load-test-liveness',
+            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'issued_at' => now()->toIso8601String(),
+            'expires_at' => now()->addMinutes(5)->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array{challenge_id: string, steps: array<int, string>, completed_at: string}
+     */
+    private function livenessPayload(): array
+    {
+        return [
+            'challenge_id' => 'load-test-liveness',
+            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'completed_at' => now()->toIso8601String(),
+        ];
     }
 }

@@ -85,8 +85,11 @@ class QrScanTest extends TestCase
                 ->component('Mahasiswa/Absen/VerifyFace')
                 ->has('session')
                 ->has('verificationExpiresAt')
+                ->has('livenessChallenge')
+                ->has('livenessChallenge.steps', 3)
                 ->where('faceConfig.threshold', 0.5)
-            );
+            )
+            ->assertSessionHas('attendance_liveness.steps', ['blink', 'turn_left', 'turn_right']);
     }
 
     public function test_mahasiswa_without_registered_face_cannot_verify_qr(): void

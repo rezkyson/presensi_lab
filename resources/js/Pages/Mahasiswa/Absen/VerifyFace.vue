@@ -24,6 +24,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    livenessChallenge: {
+        type: Object,
+        required: true,
+    },
 });
 
 const videoRef = ref(null);
@@ -36,9 +40,36 @@ const errorMessage = ref('');
 const registeredDescriptor = ref(null);
 const attemptsLeft = ref(props.attemptsRemaining);
 const lastDistance = ref(null);
+const currentLivenessIndex = ref(0);
+const livenessCompletedAt = ref(null);
+const livenessChecking = ref(false);
+const livenessMessage = ref('');
+const livenessDetail = ref('');
+const livenessBaseline = ref(null);
+const neutralSamples = ref([]);
+const activeGesture = ref(null);
+const firstTurnSign = ref(null);
+const centerReturnedSeen = ref(false);
+let livenessTimeoutId = null;
+let livenessExpiryTimeoutId = null;
 
-const canVerify = computed(() => cameraActive.value && registeredDescriptor.value && !processing.value && attemptsLeft.value > 0);
 const secureCameraContext = computed(() => window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname));
+const LIVENESS_CHECK_INTERVAL = 180;
+const LIVENESS_CALIBRATION_SAMPLES = 5;
+const TURN_DELTA_THRESHOLD = 0.1;
+const TURN_CENTER_DELTA = 0.05;
+const livenessLabels = {
+    blink: 'Kedip / buka mulut',
+    turn_left: 'Menoleh ke satu sisi',
+    turn_right: 'Menoleh ke sisi sebaliknya',
+};
+const livenessSteps = computed(() => (props.livenessChallenge.steps ?? []).map((step) => ({
+    key: step,
+    label: livenessLabels[step] ?? step,
+})));
+const currentLivenessStep = computed(() => livenessSteps.value[currentLivenessIndex.value] ?? null);
+const livenessPassed = computed(() => Boolean(livenessCompletedAt.value) && currentLivenessIndex.value >= livenessSteps.value.length);
+const canVerify = computed(() => cameraActive.value && registeredDescriptor.value && livenessPassed.value && !processing.value && attemptsLeft.value > 0);
 
 const getFaceApi = async () => {
     if (!faceapi) {
@@ -74,6 +105,288 @@ const loadRegisteredDescriptor = async () => {
     registeredDescriptor.value = response.data.descriptor.map(Number);
 };
 
+const resetLiveness = () => {
+    clearLivenessLoop();
+    clearLivenessExpiry();
+    currentLivenessIndex.value = 0;
+    livenessCompletedAt.value = null;
+    livenessChecking.value = false;
+    livenessDetail.value = '';
+    livenessBaseline.value = null;
+    neutralSamples.value = [];
+    activeGesture.value = null;
+    firstTurnSign.value = null;
+    centerReturnedSeen.value = false;
+    livenessMessage.value = livenessSteps.value.length
+        ? 'Hadapkan wajah lurus ke kamera untuk kalibrasi.'
+        : '';
+};
+
+const clearLivenessLoop = () => {
+    if (livenessTimeoutId) {
+        window.clearTimeout(livenessTimeoutId);
+        livenessTimeoutId = null;
+    }
+};
+
+const clearLivenessExpiry = () => {
+    if (livenessExpiryTimeoutId) {
+        window.clearTimeout(livenessExpiryTimeoutId);
+        livenessExpiryTimeoutId = null;
+    }
+};
+
+const scheduleLivenessCheck = () => {
+    clearLivenessLoop();
+    livenessTimeoutId = window.setTimeout(runLivenessCheck, LIVENESS_CHECK_INTERVAL);
+};
+
+const distance = (left, right) => Math.hypot(left.x - right.x, left.y - right.y);
+
+const averagePoint = (points) => {
+    const total = points.reduce((carry, point) => ({
+        x: carry.x + point.x,
+        y: carry.y + point.y,
+    }), { x: 0, y: 0 });
+
+    return {
+        x: total.x / points.length,
+        y: total.y / points.length,
+    };
+};
+
+const eyeAspectRatio = (eye) => {
+    if (eye.length < 6) {
+        return 1;
+    }
+
+    return (
+        distance(eye[1], eye[5]) +
+        distance(eye[2], eye[4])
+    ) / (2 * distance(eye[0], eye[3]));
+};
+
+const headTurnOffset = (landmarks) => {
+    const leftEyeCenter = averagePoint(landmarks.getLeftEye());
+    const rightEyeCenter = averagePoint(landmarks.getRightEye());
+    const nose = landmarks.getNose();
+    const noseTip = nose[3] ?? nose[Math.floor(nose.length / 2)];
+    const eyeCenter = averagePoint([leftEyeCenter, rightEyeCenter]);
+    const eyeDistance = Math.max(distance(leftEyeCenter, rightEyeCenter), 1);
+
+    return (noseTip.x - eyeCenter.x) / eyeDistance;
+};
+
+const mouthOpeningRatio = (mouth) => {
+    if (mouth.length < 20) {
+        return 0;
+    }
+
+    const width = Math.max(distance(mouth[12], mouth[16]), distance(mouth[0], mouth[6]), 1);
+
+    return (
+        distance(mouth[13], mouth[19]) +
+        distance(mouth[14], mouth[18]) +
+        distance(mouth[15], mouth[17])
+    ) / (3 * width);
+};
+
+const readLivenessMetrics = (landmarks) => ({
+    ear: (
+        eyeAspectRatio(landmarks.getLeftEye()) +
+        eyeAspectRatio(landmarks.getRightEye())
+    ) / 2,
+    mouth: mouthOpeningRatio(landmarks.getMouth()),
+    turn: headTurnOffset(landmarks),
+});
+
+const averageMetrics = (samples) => samples.reduce((carry, sample) => ({
+    ear: carry.ear + sample.ear / samples.length,
+    mouth: carry.mouth + sample.mouth / samples.length,
+    turn: carry.turn + sample.turn / samples.length,
+}), { ear: 0, mouth: 0, turn: 0 });
+
+const calibrateLiveness = (metrics) => {
+    neutralSamples.value = [...neutralSamples.value, metrics].slice(-LIVENESS_CALIBRATION_SAMPLES);
+    livenessDetail.value = `Kalibrasi ${neutralSamples.value.length}/${LIVENESS_CALIBRATION_SAMPLES}.`;
+
+    if (neutralSamples.value.length < LIVENESS_CALIBRATION_SAMPLES) {
+        livenessMessage.value = 'Hadapkan wajah lurus ke kamera, mata terbuka normal.';
+        return false;
+    }
+
+    livenessBaseline.value = averageMetrics(neutralSamples.value);
+    livenessMessage.value = `Ikuti instruksi: ${currentLivenessStep.value?.label}.`;
+    livenessDetail.value = '';
+
+    return true;
+};
+
+const detectActiveGesture = (metrics) => {
+    const baseline = livenessBaseline.value;
+    const closedEyeThreshold = Math.max(0.12, Math.min(0.2, baseline.ear * 0.72));
+    const reopenedEyeThreshold = Math.max(closedEyeThreshold + 0.03, baseline.ear * 0.88);
+    const openMouthThreshold = Math.max(0.22, baseline.mouth * 2.2);
+    const closedMouthThreshold = Math.max(0.12, baseline.mouth * 1.4);
+
+    if (!activeGesture.value && metrics.ear <= closedEyeThreshold) {
+        activeGesture.value = 'blink';
+        livenessMessage.value = 'Buka mata kembali.';
+        return false;
+    }
+
+    if (!activeGesture.value && metrics.mouth >= openMouthThreshold) {
+        activeGesture.value = 'mouth';
+        livenessMessage.value = 'Tutup mulut kembali.';
+        return false;
+    }
+
+    if (activeGesture.value === 'blink') {
+        return metrics.ear >= reopenedEyeThreshold;
+    }
+
+    if (activeGesture.value === 'mouth') {
+        return metrics.mouth <= closedMouthThreshold;
+    }
+
+    livenessMessage.value = 'Kedipkan mata atau buka mulut sebentar.';
+
+    return false;
+};
+
+const detectHeadTurn = (metrics, step) => {
+    const delta = metrics.turn - livenessBaseline.value.turn;
+    const sign = Math.sign(delta);
+    const progress = Math.min(Math.round((Math.abs(delta) / TURN_DELTA_THRESHOLD) * 100), 100);
+
+    if (step === 'turn_right') {
+        if (firstTurnSign.value === null) {
+            return false;
+        }
+
+        if (!centerReturnedSeen.value) {
+            if (Math.abs(delta) <= TURN_CENTER_DELTA) {
+                centerReturnedSeen.value = true;
+                livenessMessage.value = 'Sekarang menoleh ke sisi sebaliknya.';
+            } else {
+                livenessMessage.value = 'Kembali hadap lurus dulu.';
+            }
+
+            return false;
+        }
+    }
+
+    if (Math.abs(delta) < TURN_DELTA_THRESHOLD || sign === 0) {
+        livenessMessage.value = step === 'turn_left'
+            ? `Menoleh ke satu sisi sedikit lebih jauh (${progress}%).`
+            : `Menoleh ke sisi sebaliknya sedikit lebih jauh (${progress}%).`;
+        return false;
+    }
+
+    if (step === 'turn_left') {
+        firstTurnSign.value = sign;
+        centerReturnedSeen.value = false;
+        return true;
+    }
+
+    if (sign !== -firstTurnSign.value) {
+        livenessMessage.value = 'Menoleh ke arah yang berlawanan dari gerakan pertama.';
+        return false;
+    }
+
+    return true;
+};
+
+const livenessStepPassed = (step, metrics) => {
+    if (step === 'blink') {
+        return detectActiveGesture(metrics);
+    }
+
+    if (step === 'turn_left' || step === 'turn_right') {
+        return detectHeadTurn(metrics, step);
+    }
+
+    return false;
+};
+
+const completeLivenessStep = () => {
+    currentLivenessIndex.value += 1;
+    activeGesture.value = null;
+
+    if (currentLivenessIndex.value >= livenessSteps.value.length) {
+        livenessCompletedAt.value = new Date().toISOString();
+        livenessDetail.value = '';
+        livenessMessage.value = 'Liveness valid. Silakan verifikasi wajah.';
+        clearLivenessLoop();
+        livenessExpiryTimeoutId = window.setTimeout(() => {
+            if (cameraActive.value) {
+                livenessMessage.value = 'Liveness kedaluwarsa. Ulangi instruksi gerakan wajah.';
+                startLivenessChallenge();
+            }
+        }, 30000);
+        return;
+    }
+
+    if (currentLivenessStep.value?.key === 'turn_right') {
+        livenessMessage.value = 'Kembali hadap lurus dulu, lalu menoleh ke sisi sebaliknya.';
+    } else {
+        livenessMessage.value = `Ikuti instruksi: ${currentLivenessStep.value?.label}.`;
+    }
+};
+
+const runLivenessCheck = async () => {
+    if (!cameraActive.value || processing.value || livenessPassed.value) {
+        return;
+    }
+
+    if (livenessChecking.value) {
+        scheduleLivenessCheck();
+        return;
+    }
+
+    livenessChecking.value = true;
+
+    try {
+        const api = await getFaceApi();
+        const detection = await api
+            .detectSingleFace(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            .withFaceLandmarks();
+
+        if (!detection) {
+            livenessMessage.value = 'Wajah tidak terdeteksi untuk liveness.';
+            livenessDetail.value = '';
+            return;
+        }
+
+        const metrics = readLivenessMetrics(detection.landmarks);
+
+        if (!livenessBaseline.value && !calibrateLiveness(metrics)) {
+            return;
+        }
+
+        livenessDetail.value = `Mata ${metrics.ear.toFixed(2)} | Mulut ${metrics.mouth.toFixed(2)} | Gerak ${Math.abs(metrics.turn - livenessBaseline.value.turn).toFixed(2)}`;
+
+        if (currentLivenessStep.value && livenessStepPassed(currentLivenessStep.value.key, metrics)) {
+            completeLivenessStep();
+            return;
+        }
+    } catch (error) {
+        livenessMessage.value = 'Liveness gagal membaca gerakan wajah.';
+        livenessDetail.value = '';
+    } finally {
+        livenessChecking.value = false;
+
+        if (cameraActive.value && !livenessPassed.value) {
+            scheduleLivenessCheck();
+        }
+    }
+};
+
+const startLivenessChallenge = () => {
+    resetLiveness();
+    scheduleLivenessCheck();
+};
+
 const startCamera = async () => {
     errorMessage.value = '';
 
@@ -102,7 +415,8 @@ const startCamera = async () => {
         videoRef.value.srcObject = stream.value;
         await videoRef.value.play();
         cameraActive.value = true;
-        statusMessage.value = 'Kamera aktif.';
+        statusMessage.value = 'Kamera aktif. Selesaikan liveness terlebih dahulu.';
+        startLivenessChallenge();
     } catch (error) {
         if (!error.response && error.request) {
             errorMessage.value = 'Koneksi terputus saat memuat data wajah.';
@@ -117,13 +431,19 @@ const startCamera = async () => {
 };
 
 const stopCamera = () => {
+    clearLivenessLoop();
     stream.value?.getTracks().forEach((track) => track.stop());
     stream.value = null;
     cameraActive.value = false;
+    resetLiveness();
 };
 
 const verifyFace = async () => {
     if (!canVerify.value) {
+        if (!livenessPassed.value) {
+            errorMessage.value = 'Selesaikan liveness detection terlebih dahulu.';
+        }
+
         return;
     }
 
@@ -156,6 +476,11 @@ const verifyFace = async () => {
         const response = await axios.post('/mahasiswa/absen/verifikasi-wajah', {
             face_descriptor: descriptor,
             client_distance: distance,
+            liveness: {
+                challenge_id: props.livenessChallenge.id,
+                steps: props.livenessChallenge.steps,
+                completed_at: livenessCompletedAt.value,
+            },
         });
 
         await stopCamera();
@@ -173,6 +498,14 @@ const verifyFace = async () => {
 
         if (response?.data?.attempts_remaining !== undefined) {
             attemptsLeft.value = response.data.attempts_remaining;
+
+            if (attemptsLeft.value > 0) {
+                startLivenessChallenge();
+            }
+        }
+
+        if (response?.status === 422 && response?.data?.message?.includes('Liveness')) {
+            startLivenessChallenge();
         }
 
         if (response?.data?.next_url && attemptsLeft.value <= 0) {
@@ -244,6 +577,40 @@ onBeforeUnmount(() => {
 
                     <div class="mt-5 overflow-hidden rounded-lg bg-zinc-950">
                         <video ref="videoRef" class="aspect-video w-full object-cover" muted playsinline />
+                    </div>
+
+                    <div class="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-zinc-950">Liveness detection</h3>
+                                <p class="mt-1 text-sm text-zinc-600">
+                                    {{ livenessMessage || 'Aktifkan kamera, lalu ikuti instruksi gerakan wajah.' }}
+                                </p>
+                                <p v-if="livenessDetail" class="mt-1 text-xs font-medium text-zinc-500">
+                                    {{ livenessDetail }}
+                                </p>
+                            </div>
+                            <span
+                                class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                :class="livenessPassed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+                            >
+                                {{ livenessPassed ? 'Valid' : 'Belum valid' }}
+                            </span>
+                        </div>
+                        <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                            <div
+                                v-for="(step, index) in livenessSteps"
+                                :key="step.key"
+                                class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                                :class="index < currentLivenessIndex ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-zinc-200 bg-white text-zinc-600'"
+                            >
+                                <CheckCircle2
+                                    class="h-4 w-4"
+                                    :class="index < currentLivenessIndex ? 'text-emerald-700' : 'text-zinc-300'"
+                                />
+                                <span class="font-medium">{{ step.label }}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-4 space-y-2 text-sm">
