@@ -45,10 +45,6 @@ Route::middleware(['auth', 'active'])->group(function () {
                 ->name('mahasiswa.toggle-active');
             Route::post('/mahasiswa/{mahasiswa}/reset-password', [MahasiswaController::class, 'resetPassword'])
                 ->name('mahasiswa.reset-password');
-            Route::get('/mahasiswa/import', [MahasiswaController::class, 'importForm'])
-                ->name('mahasiswa.import');
-            Route::post('/mahasiswa/import', [MahasiswaController::class, 'import'])
-                ->name('mahasiswa.import.store');
             Route::resource('mahasiswa', MahasiswaController::class)
                 ->except(['show']);
             Route::patch('/dosen/{dosen}/toggle-active', [DosenController::class, 'toggleActive'])
@@ -94,6 +90,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/sesi/{sesi}/qr-data', [SesiAbsensiController::class, 'qrData'])->name('sesi.qr-data');
             Route::get('/sesi/{sesi}/monitor', [MonitorPresensiController::class, 'show'])->name('sesi.monitor');
             Route::get('/sesi/{sesi}/kehadiran', [MonitorPresensiController::class, 'attendance'])->name('sesi.kehadiran');
+            Route::patch('/sesi/{sesi}/kehadiran/{mahasiswa}', [MonitorPresensiController::class, 'updateAttendanceStatus'])->name('sesi.kehadiran.update');
             Route::delete('/sesi/{sesi}', [SesiAbsensiController::class, 'destroy'])->name('sesi.destroy');
         });
 

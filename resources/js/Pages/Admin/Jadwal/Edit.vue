@@ -1,6 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     jadwal: {
@@ -23,6 +24,8 @@ const form = useForm({
     ruangan: props.jadwal.ruangan ?? '',
 });
 
+const hasErrors = computed(() => Object.keys(form.errors).length > 0);
+
 const submit = () => {
     form.put(`/admin/jadwal/${props.jadwal.id}`);
 };
@@ -40,6 +43,13 @@ const submit = () => {
             </header>
 
             <form class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm" @submit.prevent="submit">
+                <div
+                    v-if="hasErrors"
+                    class="mb-5 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800"
+                >
+                    Jadwal belum bisa disimpan. Periksa data yang bentrok atau belum valid.
+                </div>
+
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div>
                         <label class="block text-sm font-medium text-zinc-800" for="kelas">Kelas</label>

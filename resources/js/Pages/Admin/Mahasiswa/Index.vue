@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { useConfirm } from '@/Composables/useConfirm';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { FileUp, Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-vue-next';
+import { Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
 
 const props = defineProps({
@@ -93,22 +93,13 @@ const resetPassword = async (mahasiswa) => {
                         Kelola akun, data akademik, kelas, dan status registrasi wajah mahasiswa.
                     </p>
                 </div>
-                <div class="flex flex-col gap-2 sm:flex-row">
-                    <Link
-                        class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-                        href="/admin/mahasiswa/import"
-                    >
-                        <FileUp class="h-4 w-4" />
-                        Import
-                    </Link>
-                    <Link
-                        class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
-                        href="/admin/mahasiswa/create"
-                    >
-                        <Plus class="h-4 w-4" />
-                        Tambah
-                    </Link>
-                </div>
+                <Link
+                    class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                    href="/admin/mahasiswa/create"
+                >
+                    <Plus class="h-4 w-4" />
+                    Tambah
+                </Link>
             </header>
 
             <section class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Jadwal;
+use DateTimeInterface;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -61,16 +62,53 @@ class StoreJadwalRequest extends FormRequest
             ->where('jam_selesai', '>', $this->input('jam_mulai'))
             ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId));
 
-        if ((clone $baseQuery)->where('dosen_id', $this->integer('dosen_id'))->exists()) {
-            $validator->errors()->add('dosen_id', 'Dosen sudah memiliki jadwal pada rentang waktu tersebut.');
+        $dosenConflict = (clone $baseQuery)
+            ->where('dosen_id', $this->integer('dosen_id'))
+            ->first();
+
+        if ($dosenConflict) {
+            $validator->errors()->add('dosen_id', $this->conflictMessage('Dosen sudah memiliki jadwal', $dosenConflict));
         }
 
-        if ((clone $baseQuery)->where('kelas_id', $this->integer('kelas_id'))->exists()) {
-            $validator->errors()->add('kelas_id', 'Kelas sudah memiliki jadwal pada rentang waktu tersebut.');
+        $kelasConflict = (clone $baseQuery)
+            ->where('kelas_id', $this->integer('kelas_id'))
+            ->first();
+
+        if ($kelasConflict) {
+            $validator->errors()->add('kelas_id', $this->conflictMessage('Kelas sudah memiliki jadwal', $kelasConflict));
         }
 
-        if ((clone $baseQuery)->where('ruangan', $this->input('ruangan'))->exists()) {
-            $validator->errors()->add('ruangan', 'Ruangan sudah digunakan pada rentang waktu tersebut.');
+        $roomConflict = (clone $baseQuery)
+            ->where('ruangan', $this->input('ruangan'))
+            ->first();
+
+        if ($roomConflict) {
+            $validator->errors()->add('ruangan', $this->conflictMessage("Ruangan {$this->input('ruangan')} sudah digunakan", $roomConflict));
         }
+    }
+
+    private function conflictMessage(string $prefix, Jadwal $jadwal): string
+    {
+        return sprintf(
+            '%s pada %s pukul %s-%s untuk %s.',
+            $prefix,
+            $jadwal->hari,
+            $this->formatTime($jadwal->jam_mulai),
+            $this->formatTime($jadwal->jam_selesai),
+            $jadwal->mata_kuliah,
+        );
+    }
+
+    private function formatTime(mixed $value): string
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('H:i');
+        }
+
+        if (preg_match('/(\d{2}:\d{2})/', (string) $value, $matches)) {
+            return $matches[1];
+        }
+
+        return (string) $value;
     }
 }

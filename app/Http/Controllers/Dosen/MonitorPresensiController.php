@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Dosen;
 
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
+use App\Models\Mahasiswa;
 use App\Models\Presensi;
 use App\Models\SesiAbsensi;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,6 +57,60 @@ class MonitorPresensiController extends Controller
         ]);
     }
 
+    public function updateAttendanceStatus(Request $request, SesiAbsensi $sesi, Mahasiswa $mahasiswa): JsonResponse
+    {
+        $this->authorizeSession($request, $sesi);
+        $sesi->loadMissing('jadwal.kelas');
+
+        if ($sesi->status !== SesiAbsensi::STATUS_SELESAI) {
+            return response()->json([
+                'message' => 'Status belum absen bisa diverifikasi setelah sesi ditutup.',
+            ], 422);
+        }
+
+        $isParticipant = $sesi->jadwal?->kelas?->mahasiswa()
+            ->whereKey($mahasiswa->id)
+            ->exists();
+
+        abort_unless($isParticipant, 404);
+
+        $data = $request->validate([
+            'status' => ['required', Rule::in([
+                Presensi::STATUS_TIDAK_HADIR,
+                Presensi::STATUS_IZIN,
+                Presensi::STATUS_SAKIT,
+            ])],
+        ]);
+
+        $presensi = Presensi::query()
+            ->where('sesi_id', $sesi->id)
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->first();
+
+        if ($presensi?->status === Presensi::STATUS_HADIR) {
+            return response()->json([
+                'message' => 'Mahasiswa yang sudah hadir lewat QR dan wajah tidak bisa diubah dari monitor.',
+            ], 422);
+        }
+
+        Presensi::query()->updateOrCreate(
+            [
+                'sesi_id' => $sesi->id,
+                'mahasiswa_id' => $mahasiswa->id,
+            ],
+            [
+                'status' => $data['status'],
+                'timestamp' => null,
+                'metode' => 'manual_dosen',
+            ],
+        );
+
+        return response()->json([
+            'message' => 'Status kehadiran berhasil diperbarui.',
+            'attendance' => $this->attendanceData($sesi->fresh()),
+        ]);
+    }
+
     private function attendanceData(SesiAbsensi $sesi): array
     {
         $sesi->load([
@@ -78,6 +134,7 @@ class MonitorPresensiController extends Controller
                     'status' => $presensi?->status ?? 'belum_hadir',
                     'timestamp' => $presensi?->timestamp?->format('H:i'),
                     'metode' => $presensi?->metode,
+                    'can_update_status' => $presensi?->status !== Presensi::STATUS_HADIR,
                 ];
             });
 

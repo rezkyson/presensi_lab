@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreMahasiswaRequest;
 use App\Http\Requests\Admin\UpdateMahasiswaRequest;
-use App\Imports\MahasiswaImport;
 use App\Models\Kelas;
 use App\Models\Mahasiswa;
 use App\Models\User;
@@ -15,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
-use Maatwebsite\Excel\Facades\Excel;
 
 class MahasiswaController extends Controller
 {
@@ -103,37 +101,6 @@ class MahasiswaController extends Controller
         return redirect()
             ->route('admin.mahasiswa.index')
             ->with('success', 'Data mahasiswa berhasil ditambahkan.');
-    }
-
-    public function importForm(Request $request): Response
-    {
-        return Inertia::render('Admin/Mahasiswa/Import', [
-            'importResult' => $request->session()->get('import_result'),
-            'format' => [
-                'nim',
-                'nama',
-                'email',
-                'prodi',
-                'angkatan',
-                'kelas',
-            ],
-        ]);
-    }
-
-    public function import(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:5120'],
-            'default_password' => ['nullable', 'string', 'min:6', 'max:255'],
-        ]);
-
-        $import = new MahasiswaImport(($data['default_password'] ?? null) ?: 'password');
-        Excel::import($import, $data['file']);
-
-        return redirect()
-            ->route('admin.mahasiswa.import')
-            ->with('success', 'Import mahasiswa selesai diproses.')
-            ->with('import_result', $import->result());
     }
 
     public function edit(Mahasiswa $mahasiswa): Response

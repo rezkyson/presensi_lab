@@ -77,6 +77,70 @@ class MonitorPresensiTest extends TestCase
             ->assertJsonCount(4, 'attendance.participants');
     }
 
+    public function test_dosen_can_finalize_unattended_participant_after_session_closed(): void
+    {
+        [$user, , $sesi, , $mahasiswa] = $this->createSessionWithParticipants();
+        $sesi->update([
+            'status' => SesiAbsensi::STATUS_SELESAI,
+            'ditutup_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson("/dosen/sesi/{$sesi->id}/kehadiran/{$mahasiswa[3]->id}", [
+                'status' => Presensi::STATUS_TIDAK_HADIR,
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Status kehadiran berhasil diperbarui.')
+            ->assertJsonPath('attendance.summary.tidak_hadir', 1)
+            ->assertJsonPath('attendance.summary.belum_hadir', 0);
+
+        $this->assertDatabaseHas('presensi', [
+            'sesi_id' => $sesi->id,
+            'mahasiswa_id' => $mahasiswa[3]->id,
+            'status' => Presensi::STATUS_TIDAK_HADIR,
+            'metode' => 'manual_dosen',
+        ]);
+    }
+
+    public function test_dosen_cannot_finalize_unattended_participant_before_session_closed(): void
+    {
+        [$user, , $sesi, , $mahasiswa] = $this->createSessionWithParticipants();
+
+        $this->actingAs($user)
+            ->patchJson("/dosen/sesi/{$sesi->id}/kehadiran/{$mahasiswa[3]->id}", [
+                'status' => Presensi::STATUS_IZIN,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Status belum absen bisa diverifikasi setelah sesi ditutup.');
+
+        $this->assertDatabaseMissing('presensi', [
+            'sesi_id' => $sesi->id,
+            'mahasiswa_id' => $mahasiswa[3]->id,
+        ]);
+    }
+
+    public function test_dosen_cannot_change_qr_face_attendance_from_monitor(): void
+    {
+        [$user, , $sesi, , $mahasiswa] = $this->createSessionWithParticipants();
+        $sesi->update([
+            'status' => SesiAbsensi::STATUS_SELESAI,
+            'ditutup_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson("/dosen/sesi/{$sesi->id}/kehadiran/{$mahasiswa[0]->id}", [
+                'status' => Presensi::STATUS_SAKIT,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Mahasiswa yang sudah hadir lewat QR dan wajah tidak bisa diubah dari monitor.');
+
+        $this->assertDatabaseHas('presensi', [
+            'sesi_id' => $sesi->id,
+            'mahasiswa_id' => $mahasiswa[0]->id,
+            'status' => Presensi::STATUS_HADIR,
+        ]);
+    }
+
     public function test_dosen_cannot_monitor_other_dosen_session(): void
     {
         [$user] = $this->createSessionWithParticipants();
@@ -110,7 +174,7 @@ class MonitorPresensiTest extends TestCase
     }
 
     /**
-     * @return array{0: User, 1: Dosen, 2: SesiAbsensi, 3: Kelas}
+     * @return array{0: User, 1: Dosen, 2: SesiAbsensi, 3: Kelas, 4: \Illuminate\Database\Eloquent\Collection<int, Mahasiswa>}
      */
     private function createSessionWithParticipants(): array
     {
@@ -156,6 +220,6 @@ class MonitorPresensiTest extends TestCase
             'metode' => 'manual',
         ]);
 
-        return [$user, $dosen, $sesi, $kelas];
+        return [$user, $dosen, $sesi, $kelas, $mahasiswa];
     }
 }

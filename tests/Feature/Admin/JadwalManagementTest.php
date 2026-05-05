@@ -218,6 +218,75 @@ class JadwalManagementTest extends TestCase
             ->assertSessionHasErrors('ruangan');
     }
 
+    public function test_admin_cannot_create_schedule_with_same_room_day_and_exact_time(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Jadwal::factory()->create([
+            'hari' => 'Jumat',
+            'jam_mulai' => '08:00',
+            'jam_selesai' => '09:40',
+            'ruangan' => 'LAB 1',
+            'mata_kuliah' => 'Basis Data',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from('/admin/jadwal/create')
+            ->post('/admin/jadwal', [
+                'kelas_id' => Kelas::factory()->create()->id,
+                'dosen_id' => Dosen::factory()->create()->id,
+                'mata_kuliah' => 'Pemrograman Web',
+                'hari' => 'Jumat',
+                'jam_mulai' => '08:00',
+                'jam_selesai' => '09:40',
+                'ruangan' => 'LAB 1',
+            ]);
+
+        $response
+            ->assertRedirect('/admin/jadwal/create')
+            ->assertSessionHasErrors([
+                'ruangan' => 'Ruangan LAB 1 sudah digunakan pada Jumat pukul 08:00-09:40 untuk Basis Data.',
+            ]);
+    }
+
+    public function test_admin_cannot_update_jadwal_to_overlapping_room_schedule(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Jadwal::factory()->create([
+            'hari' => 'Sabtu',
+            'jam_mulai' => '08:00',
+            'jam_selesai' => '10:00',
+            'ruangan' => 'LAB 1',
+            'mata_kuliah' => 'Basis Data',
+        ]);
+        $jadwal = Jadwal::factory()->create([
+            'hari' => 'Sabtu',
+            'jam_mulai' => '11:00',
+            'jam_selesai' => '12:00',
+            'ruangan' => 'LAB 2',
+        ]);
+
+        $this->actingAs($admin)
+            ->from("/admin/jadwal/{$jadwal->id}/edit")
+            ->put("/admin/jadwal/{$jadwal->id}", [
+                'kelas_id' => $jadwal->kelas_id,
+                'dosen_id' => $jadwal->dosen_id,
+                'mata_kuliah' => 'Pemrograman Web',
+                'hari' => 'Sabtu',
+                'jam_mulai' => '09:00',
+                'jam_selesai' => '11:00',
+                'ruangan' => 'LAB 1',
+            ])
+            ->assertRedirect("/admin/jadwal/{$jadwal->id}/edit")
+            ->assertSessionHasErrors('ruangan');
+
+        $this->assertDatabaseHas('jadwal', [
+            'id' => $jadwal->id,
+            'jam_mulai' => '11:00',
+            'jam_selesai' => '12:00',
+            'ruangan' => 'LAB 2',
+        ]);
+    }
+
     public function test_admin_can_delete_jadwal_without_sesi(): void
     {
         $admin = User::factory()->admin()->create();

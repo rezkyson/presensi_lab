@@ -6,7 +6,6 @@ use App\Models\Kelas;
 use App\Models\Mahasiswa;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -166,71 +165,6 @@ class MahasiswaManagementTest extends TestCase
         $this->assertTrue(Hash::check('mahasiswa123', $mahasiswa->user->refresh()->password));
     }
 
-    public function test_admin_can_view_mahasiswa_import_page(): void
-    {
-        $admin = User::factory()->admin()->create();
-
-        $this->actingAs($admin)
-            ->get('/admin/mahasiswa/import')
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Admin/Mahasiswa/Import')
-                ->has('format', 6)
-            );
-    }
-
-    public function test_admin_can_import_mahasiswa_from_csv(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $kelas = Kelas::create([
-            'nama_kelas' => 'IF-1A',
-            'prodi' => 'Teknik Informatika',
-            'semester' => 1,
-            'tahun_akademik' => '2025/2026',
-        ]);
-
-        $this->actingAs($admin)
-            ->post('/admin/mahasiswa/import', [
-                'default_password' => 'import123',
-                'file' => $this->csvUpload([
-                    ['nim', 'nama', 'email', 'prodi', 'angkatan', 'kelas'],
-                    ['2401010101', 'Dina Pratiwi', 'dina@example.test', 'Teknik Informatika', '2024', 'IF-1A'],
-                ]),
-            ])
-            ->assertRedirect('/admin/mahasiswa/import')
-            ->assertSessionHas('import_result.success', 1)
-            ->assertSessionHas('import_result.failed', 0);
-
-        $mahasiswa = Mahasiswa::where('nim', '2401010101')->firstOrFail();
-        $this->assertSame('Dina Pratiwi', $mahasiswa->user->name);
-        $this->assertTrue(Hash::check('import123', $mahasiswa->user->password));
-        $this->assertTrue($mahasiswa->kelas()->whereKey($kelas->id)->exists());
-    }
-
-    public function test_mahasiswa_import_reports_failed_rows(): void
-    {
-        $admin = User::factory()->admin()->create();
-        Mahasiswa::factory()->create(['nim' => '2401010001']);
-
-        $this->actingAs($admin)
-            ->post('/admin/mahasiswa/import', [
-                'default_password' => 'import123',
-                'file' => $this->csvUpload([
-                    ['nim', 'nama', 'email', 'prodi', 'angkatan', 'kelas'],
-                    ['2401010001', 'Duplikat Database', 'duplikat@example.test', 'Teknik Informatika', '2024', ''],
-                    ['2401010002', 'Kelas Hilang', 'kelas@example.test', 'Teknik Informatika', '2024', 'IF-TidakAda'],
-                    ['2401010002', 'Duplikat File', 'duplikat-file@example.test', 'Teknik Informatika', '2024', ''],
-                ]),
-            ])
-            ->assertRedirect('/admin/mahasiswa/import')
-            ->assertSessionHas('import_result.success', 1)
-            ->assertSessionHas('import_result.failed', 2);
-
-        $this->assertDatabaseHas('mahasiswa', ['nim' => '2401010002']);
-        $this->assertDatabaseMissing('users', ['email' => 'duplikat@example.test']);
-        $this->assertDatabaseMissing('users', ['email' => 'kelas@example.test']);
-    }
-
     public function test_admin_can_delete_mahasiswa_and_related_user(): void
     {
         $admin = User::factory()->admin()->create();
@@ -254,20 +188,4 @@ class MahasiswaManagementTest extends TestCase
             ->assertForbidden();
     }
 
-    /**
-     * @param  array<int, array<int, string>>  $rows
-     */
-    private function csvUpload(array $rows): UploadedFile
-    {
-        $path = tempnam(sys_get_temp_dir(), 'mahasiswa-import-');
-        $handle = fopen($path, 'w');
-
-        foreach ($rows as $row) {
-            fputcsv($handle, $row);
-        }
-
-        fclose($handle);
-
-        return new UploadedFile($path, 'mahasiswa.csv', 'text/csv', null, true);
-    }
 }
