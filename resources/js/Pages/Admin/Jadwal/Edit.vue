@@ -71,7 +71,10 @@ const submit = () => {
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-zinc-800" for="ruangan">Ruangan</label>
-                        <input id="ruangan" v-model="form.ruangan" class="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20" type="text">
+                        <select id="ruangan" v-model="form.ruangan" class="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20">
+                            <option value="">Pilih ruangan</option>
+                            <option v-for="ruangan in options.ruangan" :key="ruangan.id" :value="ruangan.nama">{{ ruangan.label }}</option>
+                        </select>
                         <p v-if="form.errors.ruangan" class="mt-1 text-sm text-red-600">{{ form.errors.ruangan }}</p>
                     </div>
                     <div>

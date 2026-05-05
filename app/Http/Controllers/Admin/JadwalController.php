@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateJadwalRequest;
 use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Kelas;
+use App\Models\Ruangan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -151,6 +152,17 @@ class JadwalController extends Controller
                 ->map(fn (Dosen $dosen) => [
                     'id' => $dosen->id,
                     'label' => "{$dosen->user?->name} - {$dosen->nip}",
+                ]),
+            'ruangan' => Ruangan::query()
+                ->where('is_active', true)
+                ->orderBy('nama')
+                ->get(['id', 'nama', 'keterangan'])
+                ->map(fn (Ruangan $ruangan) => [
+                    'id' => $ruangan->id,
+                    'nama' => $ruangan->nama,
+                    'label' => $ruangan->keterangan
+                        ? "{$ruangan->nama} - {$ruangan->keterangan}"
+                        : $ruangan->nama,
                 ]),
             'tahun_akademik' => Kelas::query()
                 ->select('tahun_akademik')

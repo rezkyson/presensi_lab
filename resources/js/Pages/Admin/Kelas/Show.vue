@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { useConfirm } from '@/Composables/useConfirm';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Trash2 } from 'lucide-vue-next';
 
@@ -26,6 +27,7 @@ const dosenForm = useForm({
     dosen_id: '',
     mata_kuliah: '',
 });
+const { confirm } = useConfirm();
 
 const attachMahasiswa = () => {
     mahasiswaForm.post(`/admin/kelas/${props.kelas.id}/mahasiswa`, {
@@ -34,8 +36,15 @@ const attachMahasiswa = () => {
     });
 };
 
-const detachMahasiswa = (mahasiswa) => {
-    if (confirm(`Hapus ${mahasiswa.name} dari kelas ini?`)) {
+const detachMahasiswa = async (mahasiswa) => {
+    const confirmed = await confirm({
+        title: 'Hapus peserta?',
+        message: `${mahasiswa.name} akan dihapus dari kelas ini.`,
+        confirmText: 'Hapus',
+        variant: 'danger',
+    });
+
+    if (confirmed) {
         router.delete(`/admin/kelas/${props.kelas.id}/mahasiswa/${mahasiswa.id}`, { preserveScroll: true });
     }
 };
@@ -47,8 +56,15 @@ const attachDosen = () => {
     });
 };
 
-const detachDosen = (dosen) => {
-    if (confirm(`Hapus pengampu ${dosen.name} untuk ${dosen.mata_kuliah}?`)) {
+const detachDosen = async (dosen) => {
+    const confirmed = await confirm({
+        title: 'Hapus pengampu?',
+        message: `${dosen.name} akan dihapus sebagai pengampu ${dosen.mata_kuliah}.`,
+        confirmText: 'Hapus',
+        variant: 'danger',
+    });
+
+    if (confirmed) {
         router.delete(`/admin/kelas/${props.kelas.id}/dosen/${dosen.pivot_id}`, { preserveScroll: true });
     }
 };

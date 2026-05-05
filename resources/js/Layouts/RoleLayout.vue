@@ -32,7 +32,7 @@ const logout = () => {
         <aside class="fixed inset-y-0 left-0 hidden w-72 border-r border-zinc-200 bg-white lg:flex lg:flex-col">
             <div class="border-b border-zinc-200 px-6 py-5">
                 <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-                    SiHadir
+                    Sistem Kehadiran Digital
                 </p>
                 <h1 class="mt-2 text-xl font-semibold">
                     {{ title }}
@@ -80,7 +80,7 @@ const logout = () => {
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-                            SiHadir
+                            Sistem Kehadiran Digital
                         </p>
                         <p class="text-sm font-semibold">
                             {{ title }}

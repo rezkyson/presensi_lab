@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import DosenLayout from '@/Layouts/DosenLayout.vue';
 import { Activity, Clock, ExternalLink, Play, QrCode } from 'lucide-vue-next';
 
@@ -17,8 +17,6 @@ defineProps({
         default: () => [],
     },
 });
-
-const page = usePage();
 
 const openSession = (schedule) => {
     router.post(`/dosen/jadwal/${schedule.id}/sesi`);
@@ -40,13 +38,6 @@ const openSession = (schedule) => {
                 </div>
             </header>
 
-            <div
-                v-if="page.props.flash?.success"
-                class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800"
-            >
-                {{ page.props.flash.success }}
-            </div>
-
             <section class="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
                 <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
                     <h2 class="text-base font-semibold text-zinc-950">Daftar jadwal dosen</h2>
@@ -60,16 +51,27 @@ const openSession = (schedule) => {
                                 <div class="flex flex-wrap items-center gap-2">
                                     <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
                                     <span
-                                        v-if="schedule.is_today"
-                                        class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800"
+                                        class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                                        :class="{
+                                            'bg-emerald-100 text-emerald-800': schedule.schedule_status === 'ongoing' && !schedule.completed_session_id,
+                                            'bg-amber-100 text-amber-800': schedule.schedule_status === 'upcoming' && !schedule.completed_session_id,
+                                            'bg-zinc-100 text-zinc-700': schedule.schedule_status === 'ended' || schedule.completed_session_id,
+                                            'bg-rose-100 text-rose-800': schedule.schedule_status === 'unavailable',
+                                        }"
                                     >
-                                        Hari ini
+                                        {{ schedule.schedule_status_label }}
                                     </span>
                                     <span
                                         v-if="schedule.active_session_id"
                                         class="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800"
                                     >
                                         Aktif
+                                    </span>
+                                    <span
+                                        v-if="schedule.completed_session_id"
+                                        class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700"
+                                    >
+                                        Selesai
                                     </span>
                                 </div>
                                 <p class="mt-1 text-sm text-zinc-600">
@@ -78,6 +80,19 @@ const openSession = (schedule) => {
                                 <p class="mt-2 flex items-center gap-2 text-sm text-zinc-500">
                                     <Clock class="h-4 w-4" />
                                     {{ schedule.hari }}, {{ schedule.jam_mulai }}-{{ schedule.jam_selesai }} &middot; {{ schedule.ruangan }}
+                                </p>
+                                <p
+                                    v-if="schedule.completed_session_id && schedule.closed_at"
+                                    class="mt-2 text-sm font-medium text-zinc-600"
+                                >
+                                    Ditutup {{ schedule.closed_at }}
+                                </p>
+                                <p
+                                    v-if="!schedule.active_session_id && !schedule.can_open_session && schedule.unavailable_reason"
+                                    class="mt-2 text-sm font-medium"
+                                    :class="schedule.schedule_status === 'ended' || schedule.completed_session_id ? 'text-zinc-600' : 'text-amber-700'"
+                                >
+                                    {{ schedule.unavailable_reason }}
                                 </p>
                             </div>
                             <div class="flex flex-col gap-2 sm:flex-row">
@@ -98,12 +113,14 @@ const openSession = (schedule) => {
                                     Monitor
                                 </Link>
                                 <button
+                                    v-if="!schedule.active_session_id"
                                     type="button"
-                                    class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                                    class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 enabled:bg-emerald-700 enabled:text-white enabled:hover:bg-emerald-800"
+                                    :disabled="!schedule.can_open_session"
                                     @click="openSession(schedule)"
                                 >
                                     <Play class="h-4 w-4" />
-                                    Buka sesi
+                                    {{ schedule.completed_session_id ? 'Sesi selesai' : (schedule.can_open_session ? 'Buka sesi' : schedule.schedule_status_label) }}
                                 </button>
                             </div>
                         </div>

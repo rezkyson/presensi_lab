@@ -132,7 +132,7 @@ class QrScanTest extends TestCase
         [$user, , , $token] = $this->createActiveSessionForMahasiswa();
 
         $payload = json_encode([
-            'type' => 'sihadir_attendance',
+            'type' => 'digital_attendance',
             'sesi_id' => $token->sesi_id + 999,
             'token' => $token->token,
         ], JSON_THROW_ON_ERROR);
@@ -280,7 +280,7 @@ class QrScanTest extends TestCase
     private function payloadFor(QrToken $token): string
     {
         return json_encode([
-            'type' => 'sihadir_attendance',
+            'type' => 'digital_attendance',
             'sesi_id' => $token->sesi_id,
             'token' => $token->token,
         ], JSON_THROW_ON_ERROR);

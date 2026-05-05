@@ -5,17 +5,19 @@ use App\Http\Controllers\Admin\JadwalController;
 use App\Http\Controllers\Admin\KelasController;
 use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\RekapController as AdminRekapController;
+use App\Http\Controllers\Admin\RuanganController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Dosen\MonitorPresensiController;
 use App\Http\Controllers\Dosen\RekapController as DosenRekapController;
 use App\Http\Controllers\Dosen\SesiAbsensiController;
 use App\Http\Controllers\Mahasiswa\AbsensiController;
+use App\Http\Controllers\Mahasiswa\JadwalController as MahasiswaJadwalController;
 use App\Http\Controllers\Mahasiswa\ProfileController;
 use App\Http\Controllers\Mahasiswa\RiwayatController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [DashboardController::class, 'home']);
+Route::redirect('/', '/login');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -54,6 +56,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('/dosen/{dosen}/reset-password', [DosenController::class, 'resetPassword'])
                 ->name('dosen.reset-password');
             Route::resource('dosen', DosenController::class)
+                ->except(['show']);
+            Route::patch('/ruangan/{ruangan}/toggle-active', [RuanganController::class, 'toggleActive'])
+                ->name('ruangan.toggle-active');
+            Route::resource('ruangan', RuanganController::class)
                 ->except(['show']);
             Route::post('/kelas/{kelas}/mahasiswa', [KelasController::class, 'attachMahasiswa'])
                 ->name('kelas.mahasiswa.attach');
@@ -112,6 +118,7 @@ Route::middleware(['auth', 'active'])->group(function () {
                 ->name('absen.verifikasi-wajah.store');
             Route::get('/absen/sukses', [AbsensiController::class, 'success'])->name('absen.sukses');
             Route::get('/absen/gagal', [AbsensiController::class, 'failed'])->name('absen.gagal');
+            Route::get('/jadwal', [MahasiswaJadwalController::class, 'index'])->name('jadwal.index');
             Route::get('/riwayat', [RiwayatController::class, 'index'])->name('riwayat.index');
         });
 });

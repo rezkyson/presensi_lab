@@ -36,7 +36,7 @@ class SesiAbsensiController extends Controller
                 'kelas:id,nama_kelas,prodi,semester,tahun_akademik',
                 'sesiAbsensi' => fn ($query) => $query
                     ->whereDate('tanggal', $today)
-                    ->where('status', SesiAbsensi::STATUS_AKTIF),
+                    ->latest('dibuka_at'),
             ])
             ->where('dosen_id', $dosen->id)
             ->get()
@@ -67,23 +67,45 @@ class SesiAbsensiController extends Controller
 
         abort_unless($jadwal->dosen_id === $dosen->id, 403);
 
-        $sesi = DB::transaction(function () use ($dosen, $jadwal) {
-            $sesi = SesiAbsensi::query()->firstOrCreate(
-                [
+        $today = CarbonImmutable::today()->toDateString();
+
+        if ($this->hasClosedSessionToday($jadwal, $today)) {
+            return back()->with('error', $this->closedSessionMessage());
+        }
+
+        if (! $this->canOpenScheduleNow($jadwal)) {
+            return back()->with('error', $this->scheduleUnavailableReason($jadwal));
+        }
+
+        [$sesi, $alreadyClosed] = DB::transaction(function () use ($dosen, $jadwal, $today) {
+            $sesi = SesiAbsensi::query()
+                ->where('jadwal_id', $jadwal->id)
+                ->whereDate('tanggal', $today)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $sesi) {
+                $sesi = SesiAbsensi::query()->create([
                     'jadwal_id' => $jadwal->id,
-                    'tanggal' => CarbonImmutable::today()->toDateString(),
+                    'tanggal' => $today,
                     'status' => SesiAbsensi::STATUS_AKTIF,
-                ],
-                [
                     'dosen_id' => $dosen->id,
                     'dibuka_at' => now(),
-                ],
-            );
+                ]);
+            }
+
+            if ($sesi->status === SesiAbsensi::STATUS_SELESAI) {
+                return [$sesi, true];
+            }
 
             $this->createQrToken($sesi);
 
-            return $sesi;
+            return [$sesi, false];
         });
+
+        if ($alreadyClosed) {
+            return back()->with('error', $this->closedSessionMessage());
+        }
 
         return redirect()
             ->route('dosen.sesi.qr', $sesi)
@@ -185,7 +207,7 @@ class SesiAbsensiController extends Controller
     private function formatQrToken(QrToken $token): array
     {
         $payload = json_encode([
-            'type' => 'sihadir_attendance',
+            'type' => 'digital_attendance',
             'sesi_id' => $token->sesi_id,
             'token' => $token->token,
         ], JSON_THROW_ON_ERROR);
@@ -236,7 +258,10 @@ class SesiAbsensiController extends Controller
 
     private function formatJadwal(Jadwal $jadwal): array
     {
-        $activeSession = $jadwal->sesiAbsensi->first();
+        $activeSession = $jadwal->sesiAbsensi->firstWhere('status', SesiAbsensi::STATUS_AKTIF);
+        $completedSession = $jadwal->sesiAbsensi->firstWhere('status', SesiAbsensi::STATUS_SELESAI);
+        $isClosedToday = $completedSession !== null;
+        $status = $this->scheduleTemporalStatus($jadwal);
 
         return [
             'id' => $jadwal->id,
@@ -246,7 +271,16 @@ class SesiAbsensiController extends Controller
             'jam_selesai' => $this->formatTime($jadwal->jam_selesai),
             'ruangan' => $jadwal->ruangan,
             'is_today' => $jadwal->hari === $this->indonesianDayName(CarbonImmutable::today()),
+            'schedule_status' => $status['code'],
+            'schedule_status_label' => $isClosedToday ? 'Sesi selesai' : $status['label'],
+            'schedule_status_description' => $isClosedToday ? 'Sesi hari ini sudah ditutup.' : $status['description'],
+            'can_open_session' => ! $isClosedToday && $status['code'] === 'ongoing',
+            'unavailable_reason' => $isClosedToday
+                ? 'Sesi hari ini sudah ditutup.'
+                : $status['description'],
             'active_session_id' => $activeSession?->id,
+            'completed_session_id' => $completedSession?->id,
+            'closed_at' => $completedSession?->ditutup_at?->format('H:i'),
             'kelas' => $jadwal->kelas ? [
                 'id' => $jadwal->kelas->id,
                 'nama_kelas' => $jadwal->kelas->nama_kelas,
@@ -272,6 +306,108 @@ class SesiAbsensiController extends Controller
         }
 
         return (string) $value;
+    }
+
+    private function hasClosedSessionToday(Jadwal $jadwal, string $today): bool
+    {
+        return SesiAbsensi::query()
+            ->where('jadwal_id', $jadwal->id)
+            ->whereDate('tanggal', $today)
+            ->where('status', SesiAbsensi::STATUS_SELESAI)
+            ->exists();
+    }
+
+    private function closedSessionMessage(): string
+    {
+        return 'Sesi untuk jadwal ini hari ini sudah ditutup dan tidak bisa dibuka ulang.';
+    }
+
+    private function canOpenScheduleNow(Jadwal $jadwal): bool
+    {
+        return $this->scheduleTemporalStatus($jadwal)['code'] === 'ongoing';
+    }
+
+    private function scheduleUnavailableReason(Jadwal $jadwal): ?string
+    {
+        return $this->scheduleTemporalStatus($jadwal)['description'];
+    }
+
+    /**
+     * @return array{code: string, label: string, description: ?string}
+     */
+    private function scheduleTemporalStatus(Jadwal $jadwal): array
+    {
+        $now = CarbonImmutable::now();
+        $todayOrder = $this->dayOrder($this->indonesianDayName($now));
+        $scheduleOrder = $this->dayOrder($jadwal->hari);
+
+        if ($scheduleOrder < $todayOrder) {
+            return [
+                'code' => 'ended',
+                'label' => 'Telah berakhir',
+                'description' => 'Jadwal minggu ini sudah berakhir.',
+            ];
+        }
+
+        if ($scheduleOrder > $todayOrder) {
+            return [
+                'code' => 'upcoming',
+                'label' => 'Belum dimulai',
+                'description' => "Sesi hanya bisa dibuka pada hari {$jadwal->hari}.",
+            ];
+        }
+
+        $start = $this->scheduledDateTime($now, $jadwal->jam_mulai);
+        $end = $this->scheduledDateTime($now, $jadwal->jam_selesai);
+
+        if ($start !== null && $end !== null && $now->betweenIncluded($start, $end)) {
+            return [
+                'code' => 'ongoing',
+                'label' => 'Sedang berlangsung',
+                'description' => null,
+            ];
+        }
+
+        if ($start !== null && $now->lessThan($start)) {
+            return [
+                'code' => 'upcoming',
+                'label' => 'Belum dimulai',
+                'description' => sprintf(
+                    'Sesi belum dimulai. Jadwal dibuka pukul %s-%s.',
+                    $this->formatTime($jadwal->jam_mulai) ?? '-',
+                    $this->formatTime($jadwal->jam_selesai) ?? '-',
+                ),
+            ];
+        }
+
+        if ($end !== null && $now->greaterThan($end)) {
+            return [
+                'code' => 'ended',
+                'label' => 'Telah berakhir',
+                'description' => 'Jadwal hari ini telah berakhir.',
+            ];
+        }
+
+        return [
+            'code' => 'unavailable',
+            'label' => 'Tidak tersedia',
+            'description' => sprintf(
+                'Sesi hanya bisa dibuka pada pukul %s-%s.',
+                $this->formatTime($jadwal->jam_mulai) ?? '-',
+                $this->formatTime($jadwal->jam_selesai) ?? '-',
+            ),
+        ];
+    }
+
+    private function scheduledDateTime(CarbonImmutable $date, mixed $time): ?CarbonImmutable
+    {
+        $formattedTime = $this->formatTime($time);
+
+        if (! $formattedTime) {
+            return null;
+        }
+
+        return $date->setTimeFromTimeString($formattedTime);
     }
 
     private function indonesianDayName(CarbonImmutable $date): string

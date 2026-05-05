@@ -21,7 +21,7 @@ class DashboardController extends Controller
     public function home(): Response
     {
         return Inertia::render('Welcome', [
-            'appName' => config('app.name', 'SiHadir'),
+            'appName' => config('app.name', 'Sistem Kehadiran Digital'),
         ]);
     }
 
@@ -70,10 +70,17 @@ class DashboardController extends Controller
     public function dosen(): Response
     {
         $dosen = request()->user()->dosen;
-        $todayName = $this->indonesianDayName(CarbonImmutable::today());
+        $today = CarbonImmutable::today();
+        $todayName = $this->indonesianDayName($today);
+        $todayOrder = $this->dayOrder($todayName);
 
         $jadwal = Jadwal::query()
-            ->with('kelas:id,nama_kelas,prodi')
+            ->with([
+                'kelas:id,nama_kelas,prodi',
+                'sesiAbsensi' => fn ($query) => $query
+                    ->whereDate('tanggal', $today)
+                    ->latest('dibuka_at'),
+            ])
             ->where('dosen_id', $dosen?->id)
             ->get();
 
@@ -85,8 +92,11 @@ class DashboardController extends Controller
                 ->values()
                 ->map(fn (Jadwal $jadwal) => $this->formatJadwal($jadwal)),
             'upcomingSchedules' => $jadwal
-                ->reject(fn (Jadwal $jadwal) => $jadwal->hari === $todayName)
-                ->sortBy([['hari', 'asc'], ['jam_mulai', 'asc']])
+                ->filter(fn (Jadwal $jadwal) => $this->dayOrder($jadwal->hari) > $todayOrder)
+                ->sortBy([
+                    fn (Jadwal $jadwal) => $this->dayOrder($jadwal->hari),
+                    fn (Jadwal $jadwal) => $this->formatTime($jadwal->jam_mulai) ?? '',
+                ])
                 ->take(5)
                 ->values()
                 ->map(fn (Jadwal $jadwal) => $this->formatJadwal($jadwal)),
@@ -94,6 +104,7 @@ class DashboardController extends Controller
                 ->with('jadwal.kelas:id,nama_kelas,prodi')
                 ->where('dosen_id', $dosen?->id)
                 ->where('status', SesiAbsensi::STATUS_AKTIF)
+                ->whereDate('tanggal', $today)
                 ->latest('dibuka_at')
                 ->get()
                 ->map(fn (SesiAbsensi $sesi) => [
@@ -154,6 +165,12 @@ class DashboardController extends Controller
 
     private function formatJadwal(Jadwal $jadwal): array
     {
+        $sessions = $jadwal->relationLoaded('sesiAbsensi') ? $jadwal->sesiAbsensi : collect();
+        $activeSession = $sessions->firstWhere('status', SesiAbsensi::STATUS_AKTIF);
+        $completedSession = $sessions->firstWhere('status', SesiAbsensi::STATUS_SELESAI);
+        $isClosedToday = $completedSession !== null;
+        $status = $this->scheduleTemporalStatus($jadwal);
+
         return [
             'id' => $jadwal->id,
             'mata_kuliah' => $jadwal->mata_kuliah,
@@ -167,6 +184,16 @@ class DashboardController extends Controller
                 'prodi' => $jadwal->kelas->prodi,
             ] : null,
             'dosen' => $jadwal->dosen?->user?->name,
+            'schedule_status' => $status['code'],
+            'schedule_status_label' => $isClosedToday ? 'Sesi selesai' : $status['label'],
+            'schedule_status_description' => $isClosedToday ? 'Sesi hari ini sudah ditutup.' : $status['description'],
+            'can_open_session' => ! $isClosedToday && $status['code'] === 'ongoing',
+            'unavailable_reason' => $isClosedToday
+                ? 'Sesi hari ini sudah ditutup.'
+                : $status['description'],
+            'active_session_id' => $activeSession?->id,
+            'completed_session_id' => $completedSession?->id,
+            'closed_at' => $completedSession?->ditutup_at?->format('H:i'),
         ];
     }
 
@@ -187,6 +214,94 @@ class DashboardController extends Controller
         return (string) $value;
     }
 
+    private function canOpenScheduleNow(Jadwal $jadwal): bool
+    {
+        return $this->scheduleTemporalStatus($jadwal)['code'] === 'ongoing';
+    }
+
+    private function scheduleUnavailableReason(Jadwal $jadwal): ?string
+    {
+        return $this->scheduleTemporalStatus($jadwal)['description'];
+    }
+
+    /**
+     * @return array{code: string, label: string, description: ?string}
+     */
+    private function scheduleTemporalStatus(Jadwal $jadwal): array
+    {
+        $now = CarbonImmutable::now();
+        $todayOrder = $this->dayOrder($this->indonesianDayName($now));
+        $scheduleOrder = $this->dayOrder($jadwal->hari);
+
+        if ($scheduleOrder < $todayOrder) {
+            return [
+                'code' => 'ended',
+                'label' => 'Telah berakhir',
+                'description' => 'Jadwal minggu ini sudah berakhir.',
+            ];
+        }
+
+        if ($scheduleOrder > $todayOrder) {
+            return [
+                'code' => 'upcoming',
+                'label' => 'Belum dimulai',
+                'description' => "Sesi hanya bisa dibuka pada hari {$jadwal->hari}.",
+            ];
+        }
+
+        $start = $this->scheduledDateTime($now, $jadwal->jam_mulai);
+        $end = $this->scheduledDateTime($now, $jadwal->jam_selesai);
+
+        if ($start !== null && $end !== null && $now->betweenIncluded($start, $end)) {
+            return [
+                'code' => 'ongoing',
+                'label' => 'Sedang berlangsung',
+                'description' => null,
+            ];
+        }
+
+        if ($start !== null && $now->lessThan($start)) {
+            return [
+                'code' => 'upcoming',
+                'label' => 'Belum dimulai',
+                'description' => sprintf(
+                    'Sesi belum dimulai. Jadwal dibuka pukul %s-%s.',
+                    $this->formatTime($jadwal->jam_mulai) ?? '-',
+                    $this->formatTime($jadwal->jam_selesai) ?? '-',
+                ),
+            ];
+        }
+
+        if ($end !== null && $now->greaterThan($end)) {
+            return [
+                'code' => 'ended',
+                'label' => 'Telah berakhir',
+                'description' => 'Jadwal hari ini telah berakhir.',
+            ];
+        }
+
+        return [
+            'code' => 'unavailable',
+            'label' => 'Tidak tersedia',
+            'description' => sprintf(
+                'Sesi hanya bisa dibuka pada pukul %s-%s.',
+                $this->formatTime($jadwal->jam_mulai) ?? '-',
+                $this->formatTime($jadwal->jam_selesai) ?? '-',
+            ),
+        ];
+    }
+
+    private function scheduledDateTime(CarbonImmutable $date, mixed $time): ?CarbonImmutable
+    {
+        $formattedTime = $this->formatTime($time);
+
+        if (! $formattedTime) {
+            return null;
+        }
+
+        return $date->setTimeFromTimeString($formattedTime);
+    }
+
     private function indonesianDayName(CarbonImmutable $date): string
     {
         return [
@@ -198,5 +313,10 @@ class DashboardController extends Controller
             6 => 'Sabtu',
             7 => 'Minggu',
         ][$date->dayOfWeekIso];
+    }
+
+    private function dayOrder(string $day): int
+    {
+        return array_search($day, ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'], true) ?: 0;
     }
 }

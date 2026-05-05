@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Kelas;
+use App\Models\Ruangan;
 use App\Models\SesiAbsensi;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,7 +50,7 @@ class JadwalManagementTest extends TestCase
                 'hari' => 'Senin',
                 'jam_mulai' => '08:00',
                 'jam_selesai' => '09:40',
-                'ruangan' => 'Lab A',
+                'ruangan' => 'LAB 1',
             ])
             ->assertRedirect('/admin/jadwal');
 
@@ -58,7 +59,7 @@ class JadwalManagementTest extends TestCase
             'dosen_id' => $dosen->id,
             'mata_kuliah' => 'Pemrograman Web',
             'hari' => 'Senin',
-            'ruangan' => 'Lab A',
+            'ruangan' => 'LAB 1',
         ]);
     }
 
@@ -69,7 +70,7 @@ class JadwalManagementTest extends TestCase
             'hari' => 'Senin',
             'jam_mulai' => '08:00',
             'jam_selesai' => '09:40',
-            'ruangan' => 'Lab A',
+            'ruangan' => 'LAB 1',
         ]);
 
         $this->actingAs($admin)
@@ -80,7 +81,7 @@ class JadwalManagementTest extends TestCase
                 'hari' => 'Selasa',
                 'jam_mulai' => '10:00',
                 'jam_selesai' => '11:40',
-                'ruangan' => 'Lab B',
+                'ruangan' => 'LAB 2',
             ])
             ->assertRedirect('/admin/jadwal');
 
@@ -88,7 +89,7 @@ class JadwalManagementTest extends TestCase
             'id' => $jadwal->id,
             'mata_kuliah' => 'Basis Data',
             'hari' => 'Selasa',
-            'ruangan' => 'Lab B',
+            'ruangan' => 'LAB 2',
         ]);
     }
 
@@ -107,10 +108,35 @@ class JadwalManagementTest extends TestCase
                 'hari' => 'Senin',
                 'jam_mulai' => '10:00',
                 'jam_selesai' => '09:40',
-                'ruangan' => 'Lab A',
+                'ruangan' => 'LAB 1',
             ])
             ->assertRedirect('/admin/jadwal/create')
             ->assertSessionHasErrors('jam_selesai');
+    }
+
+    public function test_admin_cannot_create_jadwal_with_inactive_room(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $kelas = Kelas::factory()->create();
+        $dosen = Dosen::factory()->create();
+        $ruangan = Ruangan::factory()->create([
+            'nama' => 'LAB 4',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->from('/admin/jadwal/create')
+            ->post('/admin/jadwal', [
+                'kelas_id' => $kelas->id,
+                'dosen_id' => $dosen->id,
+                'mata_kuliah' => 'Pemrograman Web',
+                'hari' => 'Senin',
+                'jam_mulai' => '08:00',
+                'jam_selesai' => '09:40',
+                'ruangan' => $ruangan->nama,
+            ])
+            ->assertRedirect('/admin/jadwal/create')
+            ->assertSessionHasErrors('ruangan');
     }
 
     public function test_admin_cannot_create_overlapping_dosen_schedule(): void
@@ -122,7 +148,7 @@ class JadwalManagementTest extends TestCase
             'hari' => 'Senin',
             'jam_mulai' => '08:00',
             'jam_selesai' => '10:00',
-            'ruangan' => 'Lab A',
+            'ruangan' => 'LAB 1',
         ]);
 
         $this->actingAs($admin)
@@ -134,7 +160,7 @@ class JadwalManagementTest extends TestCase
                 'hari' => 'Senin',
                 'jam_mulai' => '09:00',
                 'jam_selesai' => '11:00',
-                'ruangan' => 'Lab B',
+                'ruangan' => 'LAB 2',
             ])
             ->assertRedirect('/admin/jadwal/create')
             ->assertSessionHasErrors('dosen_id');
@@ -149,7 +175,7 @@ class JadwalManagementTest extends TestCase
             'hari' => 'Rabu',
             'jam_mulai' => '08:00',
             'jam_selesai' => '10:00',
-            'ruangan' => 'Lab A',
+            'ruangan' => 'LAB 1',
         ]);
 
         $this->actingAs($admin)
@@ -161,7 +187,7 @@ class JadwalManagementTest extends TestCase
                 'hari' => 'Rabu',
                 'jam_mulai' => '09:00',
                 'jam_selesai' => '11:00',
-                'ruangan' => 'Lab B',
+                'ruangan' => 'LAB 2',
             ])
             ->assertRedirect('/admin/jadwal/create')
             ->assertSessionHasErrors('kelas_id');
@@ -174,7 +200,7 @@ class JadwalManagementTest extends TestCase
             'hari' => 'Kamis',
             'jam_mulai' => '08:00',
             'jam_selesai' => '10:00',
-            'ruangan' => 'Lab A',
+            'ruangan' => 'LAB 1',
         ]);
 
         $this->actingAs($admin)
@@ -186,7 +212,7 @@ class JadwalManagementTest extends TestCase
                 'hari' => 'Kamis',
                 'jam_mulai' => '09:00',
                 'jam_selesai' => '11:00',
-                'ruangan' => 'Lab A',
+                'ruangan' => 'LAB 1',
             ])
             ->assertRedirect('/admin/jadwal/create')
             ->assertSessionHasErrors('ruangan');

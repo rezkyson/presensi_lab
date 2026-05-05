@@ -87,9 +87,29 @@ defineProps({
                         >
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
+                                        <span
+                                            class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                                            :class="{
+                                                'bg-emerald-100 text-emerald-800': schedule.schedule_status === 'ongoing',
+                                                'bg-amber-100 text-amber-800': schedule.schedule_status === 'upcoming',
+                                                'bg-zinc-100 text-zinc-700': schedule.schedule_status === 'ended',
+                                                'bg-rose-100 text-rose-800': schedule.schedule_status === 'unavailable',
+                                            }"
+                                        >
+                                            {{ schedule.schedule_status_label }}
+                                        </span>
+                                    </div>
                                     <p class="mt-1 text-sm text-zinc-600">
                                         {{ schedule.dosen }} &middot; {{ schedule.ruangan }}
+                                    </p>
+                                    <p
+                                        v-if="schedule.schedule_status_description"
+                                        class="mt-2 text-sm font-medium"
+                                        :class="schedule.schedule_status === 'ended' ? 'text-zinc-600' : 'text-amber-700'"
+                                    >
+                                        {{ schedule.schedule_status_description }}
                                     </p>
                                 </div>
                                 <p class="text-sm font-medium text-zinc-700">

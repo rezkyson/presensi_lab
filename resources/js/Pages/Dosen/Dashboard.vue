@@ -60,7 +60,20 @@ const openSession = (schedule) => {
                         >
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
+                                        <span
+                                            class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                                            :class="{
+                                                'bg-emerald-100 text-emerald-800': schedule.schedule_status === 'ongoing' && !schedule.completed_session_id,
+                                                'bg-amber-100 text-amber-800': schedule.schedule_status === 'upcoming' && !schedule.completed_session_id,
+                                                'bg-zinc-100 text-zinc-700': schedule.schedule_status === 'ended' || schedule.completed_session_id,
+                                                'bg-rose-100 text-rose-800': schedule.schedule_status === 'unavailable',
+                                            }"
+                                        >
+                                            {{ schedule.schedule_status_label }}
+                                        </span>
+                                    </div>
                                     <p class="mt-1 text-sm text-zinc-600">
                                         {{ schedule.kelas?.nama_kelas }} &middot; {{ schedule.kelas?.prodi }}
                                     </p>
@@ -70,14 +83,39 @@ const openSession = (schedule) => {
                                 </p>
                             </div>
                             <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <p class="text-sm text-zinc-500">{{ schedule.ruangan }}</p>
+                                <div>
+                                    <p class="text-sm text-zinc-500">{{ schedule.ruangan }}</p>
+                                    <p
+                                        v-if="schedule.completed_session_id && schedule.closed_at"
+                                        class="mt-1 text-sm font-medium text-zinc-600"
+                                    >
+                                        Ditutup {{ schedule.closed_at }}
+                                    </p>
+                                    <p
+                                        v-if="!schedule.active_session_id && !schedule.can_open_session && schedule.unavailable_reason"
+                                        class="mt-1 text-sm font-medium"
+                                        :class="schedule.schedule_status === 'ended' || schedule.completed_session_id ? 'text-zinc-600' : 'text-amber-700'"
+                                    >
+                                        {{ schedule.unavailable_reason }}
+                                    </p>
+                                </div>
+                                <Link
+                                    v-if="schedule.active_session_id"
+                                    class="touch-target inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                                    :href="`/dosen/sesi/${schedule.active_session_id}/qr`"
+                                >
+                                    <QrCode class="h-4 w-4" />
+                                    Lihat QR
+                                </Link>
                                 <button
+                                    v-else
                                     type="button"
-                                    class="touch-target inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                                    class="touch-target inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 enabled:bg-emerald-700 enabled:text-white enabled:hover:bg-emerald-800"
+                                    :disabled="!schedule.can_open_session"
                                     @click="openSession(schedule)"
                                 >
                                     <QrCode class="h-4 w-4" />
-                                    Buka QR
+                                    {{ schedule.completed_session_id ? 'Sesi selesai' : (schedule.can_open_session ? 'Buka QR' : schedule.schedule_status_label) }}
                                 </button>
                             </div>
                         </div>
@@ -135,6 +173,12 @@ const openSession = (schedule) => {
                         </p>
                         <p class="mt-2 text-sm text-zinc-500">
                             {{ schedule.kelas?.nama_kelas }} &middot; {{ schedule.ruangan }}
+                        </p>
+                        <p
+                            v-if="schedule.schedule_status_description"
+                            class="mt-2 text-sm font-medium text-amber-700"
+                        >
+                            {{ schedule.schedule_status_description }}
                         </p>
                     </div>
                 </div>

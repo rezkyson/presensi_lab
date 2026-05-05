@@ -35,7 +35,7 @@ class UpdateKelasRequest extends FormRequest
                     ->where('tahun_akademik', $this->input('tahun_akademik'))
                     ->ignore($kelas?->id),
             ],
-            'prodi' => ['required', 'string', 'max:120'],
+            'prodi' => ['required', 'string', 'max:120', Rule::in(['Teknik Informatika', 'Sistem Informasi'])],
             'semester' => ['required', 'integer', 'min:1', 'max:14'],
             'tahun_akademik' => ['required', 'string', 'max:20'],
         ];

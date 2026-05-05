@@ -1,7 +1,8 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { useConfirm } from '@/Composables/useConfirm';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { FileUp, Pencil, Plus, RotateCcw, Search, Trash2, UserCheck, UserX } from 'lucide-vue-next';
+import { FileUp, Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
 
 const props = defineProps({
@@ -30,6 +31,7 @@ const filterForm = reactive({
     wajah: props.filters.wajah ?? '',
 });
 const filtering = ref(false);
+const { confirm } = useConfirm();
 
 const applyFilters = () => {
     filtering.value = true;
@@ -51,18 +53,28 @@ const clearFilters = () => {
     applyFilters();
 };
 
-const destroyMahasiswa = (mahasiswa) => {
-    if (confirm(`Hapus mahasiswa ${mahasiswa.name}?`)) {
+const destroyMahasiswa = async (mahasiswa) => {
+    const confirmed = await confirm({
+        title: 'Hapus mahasiswa?',
+        message: `Data ${mahasiswa.name} akan dihapus dari sistem.`,
+        confirmText: 'Hapus',
+        variant: 'danger',
+    });
+
+    if (confirmed) {
         router.delete(`/admin/mahasiswa/${mahasiswa.id}`);
     }
 };
 
-const toggleActive = (mahasiswa) => {
-    router.patch(`/admin/mahasiswa/${mahasiswa.id}/toggle-active`, {}, { preserveScroll: true });
-};
+const resetPassword = async (mahasiswa) => {
+    const confirmed = await confirm({
+        title: 'Reset password?',
+        message: `Password ${mahasiswa.name} akan dikembalikan ke password default.`,
+        confirmText: 'Reset password',
+        variant: 'primary',
+    });
 
-const resetPassword = (mahasiswa) => {
-    if (confirm(`Reset password ${mahasiswa.name} ke password default?`)) {
+    if (confirmed) {
         router.post(`/admin/mahasiswa/${mahasiswa.id}/reset-password`, {}, { preserveScroll: true });
     }
 };
@@ -176,7 +188,7 @@ const resetPassword = (mahasiswa) => {
                                 <th class="px-5 py-3 font-semibold">Mahasiswa</th>
                                 <th class="px-5 py-3 font-semibold">Akademik</th>
                                 <th class="px-5 py-3 font-semibold">Kelas</th>
-                                <th class="px-5 py-3 font-semibold">Status</th>
+                                <th class="px-5 py-3 font-semibold">Wajah</th>
                                 <th class="px-5 py-3 text-right font-semibold">Aksi</th>
                             </tr>
                         </thead>
@@ -204,21 +216,12 @@ const resetPassword = (mahasiswa) => {
                                     <span v-else class="text-sm text-zinc-400">Belum ada kelas</span>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <div class="space-y-2">
-                                        <span
-                                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
-                                            :class="item.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-200 text-zinc-700'"
-                                        >
-                                            {{ item.is_active ? 'Aktif' : 'Nonaktif' }}
-                                        </span>
-                                        <br>
-                                        <span
-                                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
-                                            :class="item.wajah_terdaftar ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'"
-                                        >
-                                            {{ item.wajah_terdaftar ? 'Wajah terdaftar' : 'Wajah belum' }}
-                                        </span>
-                                    </div>
+                                    <span
+                                        class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                        :class="item.wajah_terdaftar ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'"
+                                    >
+                                        {{ item.wajah_terdaftar ? 'Terdaftar' : 'Belum' }}
+                                    </span>
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex justify-end gap-2">
@@ -229,15 +232,6 @@ const resetPassword = (mahasiswa) => {
                                         >
                                             <Pencil class="h-4 w-4" />
                                         </Link>
-                                        <button
-                                            class="rounded-md border border-zinc-300 p-2 text-zinc-700 transition hover:bg-zinc-100"
-                                            type="button"
-                                            :title="item.is_active ? 'Nonaktifkan' : 'Aktifkan'"
-                                            @click="toggleActive(item)"
-                                        >
-                                            <UserX v-if="item.is_active" class="h-4 w-4" />
-                                            <UserCheck v-else class="h-4 w-4" />
-                                        </button>
                                         <button
                                             class="rounded-md border border-zinc-300 p-2 text-zinc-700 transition hover:bg-zinc-100"
                                             title="Reset password"

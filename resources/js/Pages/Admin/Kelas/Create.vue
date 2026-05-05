@@ -4,8 +4,8 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
     nama_kelas: '',
-    prodi: '',
-    semester: 1,
+    prodi: 'Teknik Informatika',
+    semester: 6,
     tahun_akademik: '2025/2026',
 });
 
@@ -34,7 +34,10 @@ const submit = () => {
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-zinc-800" for="prodi">Prodi</label>
-                        <input id="prodi" v-model="form.prodi" class="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20" type="text">
+                        <select id="prodi" v-model="form.prodi" class="mt-2 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20">
+                            <option value="Teknik Informatika">Teknik Informatika</option>
+                            <option value="Sistem Informasi">Sistem Informasi</option>
+                        </select>
                         <p v-if="form.errors.prodi" class="mt-1 text-sm text-red-600">{{ form.errors.prodi }}</p>
                     </div>
                     <div>

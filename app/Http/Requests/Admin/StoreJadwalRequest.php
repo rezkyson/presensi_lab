@@ -31,7 +31,12 @@ class StoreJadwalRequest extends FormRequest
             'hari' => ['required', Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'])],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_selesai' => ['required', 'date_format:H:i', 'after:jam_mulai'],
-            'ruangan' => ['required', 'string', 'max:100'],
+            'ruangan' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::exists('ruangan', 'nama')->where(fn ($query) => $query->where('is_active', true)),
+            ],
         ];
     }
 

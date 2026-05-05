@@ -441,7 +441,7 @@ class AbsensiController extends Controller
 
         if (
             ! is_array($payload)
-            || ($payload['type'] ?? null) !== 'sihadir_attendance'
+            || ($payload['type'] ?? null) !== 'digital_attendance'
             || ! isset($payload['sesi_id'], $payload['token'])
         ) {
             $this->invalidQr($request, $mahasiswa, 'Format QR tidak sesuai.');

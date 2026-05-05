@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { useConfirm } from '@/Composables/useConfirm';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
@@ -26,6 +27,7 @@ const filterForm = reactive({
     tahun_akademik: props.filters.tahun_akademik ?? '',
 });
 const filtering = ref(false);
+const { confirm } = useConfirm();
 
 const applyFilters = () => {
     filtering.value = true;
@@ -47,8 +49,15 @@ const clearFilters = () => {
     applyFilters();
 };
 
-const destroyKelas = (kelas) => {
-    if (confirm(`Hapus kelas ${kelas.nama_kelas}?`)) {
+const destroyKelas = async (kelas) => {
+    const confirmed = await confirm({
+        title: 'Hapus kelas?',
+        message: `Data kelas ${kelas.nama_kelas} akan dihapus.`,
+        confirmText: 'Hapus',
+        variant: 'danger',
+    });
+
+    if (confirmed) {
         router.delete(`/admin/kelas/${kelas.id}`);
     }
 };
@@ -72,7 +81,7 @@ const destroyKelas = (kelas) => {
                     href="/admin/kelas/create"
                 >
                     <Plus class="h-4 w-4" />
-                    Tambah
+                    Tambah Kelas
                 </Link>
             </header>
 

@@ -32,7 +32,7 @@ class StoreKelasRequest extends FormRequest
                     ->where('semester', $this->input('semester'))
                     ->where('tahun_akademik', $this->input('tahun_akademik')),
             ],
-            'prodi' => ['required', 'string', 'max:120'],
+            'prodi' => ['required', 'string', 'max:120', Rule::in(['Teknik Informatika', 'Sistem Informasi'])],
             'semester' => ['required', 'integer', 'min:1', 'max:14'],
             'tahun_akademik' => ['required', 'string', 'max:20'],
         ];

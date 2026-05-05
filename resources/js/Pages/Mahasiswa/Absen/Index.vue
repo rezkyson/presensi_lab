@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, usePage, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import MahasiswaLayout from '@/Layouts/MahasiswaLayout.vue';
 import axios from 'axios';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
@@ -21,7 +21,6 @@ const props = defineProps({
     },
 });
 
-const page = usePage();
 const scannerId = 'mahasiswa-qr-reader';
 const scanner = ref(null);
 const scanning = ref(false);
@@ -182,13 +181,6 @@ onBeforeUnmount(() => {
                     Daftarkan wajah
                 </Link>
             </header>
-
-            <div
-                v-if="page.props.flash?.error"
-                class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800"
-            >
-                {{ page.props.flash.error }}
-            </div>
 
             <section v-if="!faceRegistered" class="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900">
                 <h2 class="font-semibold">Wajah belum terdaftar</h2>

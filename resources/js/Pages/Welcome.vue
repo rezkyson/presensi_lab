@@ -2,7 +2,7 @@
 defineProps({
     appName: {
         type: String,
-        default: 'SiHadir',
+        default: 'Sistem Kehadiran Digital',
     },
 });
 </script>

@@ -1,6 +1,6 @@
-# SiHadir
+# Sistem Kehadiran Digital
 
-SiHadir adalah sistem kehadiran digital untuk laboratorium/kuliah berbasis Laravel, Inertia, Vue, QR token, dan verifikasi wajah.
+Sistem Kehadiran Digital adalah aplikasi presensi untuk laboratorium/kuliah berbasis Laravel, Inertia, Vue, QR token, dan verifikasi wajah.
 
 ## Dokumentasi Proyek
 
@@ -19,10 +19,10 @@ npm run build
 
 ## Akun Demo
 
-- Admin: `admin@sihadir.local` / `admin123`
-- Dosen: `rani@sihadir.local` / `password`
-- Dosen: `budi@sihadir.local` / `password`
-- Mahasiswa: NIM `2401010001` / `password`
+- Admin: `admin@gmail.com` / `admin123`
+- Dosen: `rani.prasetya@gmail.com` / `password`
+- Dosen: `budi.santoso@gmail.com` / `password`
+- Mahasiswa: NIM `2201010001` / `password`
 
 ## Catatan
 

@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { useConfirm } from '@/Composables/useConfirm';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
 import { reactive, ref } from 'vue';
@@ -30,6 +31,7 @@ const filterForm = reactive({
     tahun_akademik: props.filters.tahun_akademik ?? '',
 });
 const filtering = ref(false);
+const { confirm } = useConfirm();
 
 const applyFilters = () => {
     filtering.value = true;
@@ -51,8 +53,15 @@ const clearFilters = () => {
     applyFilters();
 };
 
-const destroyJadwal = (jadwal) => {
-    if (confirm(`Hapus jadwal ${jadwal.mata_kuliah}?`)) {
+const destroyJadwal = async (jadwal) => {
+    const confirmed = await confirm({
+        title: 'Hapus jadwal?',
+        message: `Jadwal ${jadwal.mata_kuliah} akan dihapus.`,
+        confirmText: 'Hapus',
+        variant: 'danger',
+    });
+
+    if (confirmed) {
         router.delete(`/admin/jadwal/${jadwal.id}`);
     }
 };

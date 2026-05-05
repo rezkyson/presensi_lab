@@ -95,6 +95,98 @@ class SesiAbsensiTest extends TestCase
         $this->assertNotSame($firstToken, QrToken::first()->token);
     }
 
+    public function test_dosen_cannot_reopen_closed_session_for_same_schedule_date(): void
+    {
+        [$user, $dosen, $jadwal] = $this->createDosenSchedule();
+
+        SesiAbsensi::factory()->create([
+            'jadwal_id' => $jadwal->id,
+            'dosen_id' => $dosen->id,
+            'tanggal' => CarbonImmutable::today(),
+            'status' => SesiAbsensi::STATUS_SELESAI,
+            'ditutup_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->from('/dosen/sesi')
+            ->post("/dosen/jadwal/{$jadwal->id}/sesi")
+            ->assertRedirect('/dosen/sesi')
+            ->assertSessionHas('error', 'Sesi untuk jadwal ini hari ini sudah ditutup dan tidak bisa dibuka ulang.');
+
+        $this->assertDatabaseCount('sesi_absensi', 1);
+        $this->assertDatabaseCount('qr_tokens', 0);
+    }
+
+    public function test_closed_session_is_shown_as_finished_on_session_index(): void
+    {
+        [$user, $dosen, $jadwal] = $this->createDosenSchedule();
+        $sesi = SesiAbsensi::factory()->create([
+            'jadwal_id' => $jadwal->id,
+            'dosen_id' => $dosen->id,
+            'tanggal' => CarbonImmutable::today(),
+            'status' => SesiAbsensi::STATUS_SELESAI,
+            'ditutup_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/dosen/sesi')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dosen/Sesi/Index')
+                ->where('schedules.0.active_session_id', null)
+                ->where('schedules.0.completed_session_id', $sesi->id)
+                ->where('schedules.0.can_open_session', false)
+                ->where('schedules.0.unavailable_reason', 'Sesi hari ini sudah ditutup.')
+            );
+    }
+
+    public function test_dosen_cannot_open_session_before_scheduled_day(): void
+    {
+        [$user, , $jadwal] = $this->createDosenSchedule();
+        $jadwal->update(['hari' => 'Selasa']);
+
+        $this->actingAs($user)
+            ->from('/dosen/sesi')
+            ->post("/dosen/jadwal/{$jadwal->id}/sesi")
+            ->assertRedirect('/dosen/sesi')
+            ->assertSessionHas('error', 'Sesi hanya bisa dibuka pada hari Selasa.');
+
+        $this->assertDatabaseCount('sesi_absensi', 0);
+        $this->assertDatabaseCount('qr_tokens', 0);
+    }
+
+    public function test_dosen_cannot_open_session_before_scheduled_time(): void
+    {
+        CarbonImmutable::setTestNow('2026-05-04 07:59:00');
+
+        [$user, , $jadwal] = $this->createDosenSchedule();
+
+        $this->actingAs($user)
+            ->from('/dosen/sesi')
+            ->post("/dosen/jadwal/{$jadwal->id}/sesi")
+            ->assertRedirect('/dosen/sesi')
+            ->assertSessionHas('error', 'Sesi belum dimulai. Jadwal dibuka pukul 08:00-09:40.');
+
+        $this->assertDatabaseCount('sesi_absensi', 0);
+        $this->assertDatabaseCount('qr_tokens', 0);
+    }
+
+    public function test_dosen_cannot_open_session_after_scheduled_time(): void
+    {
+        CarbonImmutable::setTestNow('2026-05-04 09:41:00');
+
+        [$user, , $jadwal] = $this->createDosenSchedule();
+
+        $this->actingAs($user)
+            ->from('/dosen/sesi')
+            ->post("/dosen/jadwal/{$jadwal->id}/sesi")
+            ->assertRedirect('/dosen/sesi')
+            ->assertSessionHas('error', 'Jadwal hari ini telah berakhir.');
+
+        $this->assertDatabaseCount('sesi_absensi', 0);
+        $this->assertDatabaseCount('qr_tokens', 0);
+    }
+
     public function test_dosen_cannot_open_session_for_other_dosen_schedule(): void
     {
         [$user] = $this->createDosenSchedule();

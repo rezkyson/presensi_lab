@@ -38,7 +38,7 @@ class JadwalFactory extends Factory
             'hari' => fake()->randomElement(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']),
             'jam_mulai' => $slot[0],
             'jam_selesai' => $slot[1],
-            'ruangan' => fake()->randomElement(['Lab A', 'Lab B', 'Lab C']),
+            'ruangan' => fake()->randomElement(['LAB 1', 'LAB 2', 'LAB 3']),
         ];
     }
 }
