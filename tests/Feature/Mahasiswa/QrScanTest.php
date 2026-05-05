@@ -86,10 +86,10 @@ class QrScanTest extends TestCase
                 ->has('session')
                 ->has('verificationExpiresAt')
                 ->has('livenessChallenge')
-                ->has('livenessChallenge.steps', 3)
+                ->has('livenessChallenge.steps', 2)
                 ->where('faceConfig.threshold', 0.5)
             )
-            ->assertSessionHas('attendance_liveness.steps', ['blink', 'turn_left', 'turn_right']);
+            ->assertSessionHas('attendance_liveness.steps', ['mouth_open', 'turn_left']);
     }
 
     public function test_mahasiswa_without_registered_face_cannot_verify_qr(): void

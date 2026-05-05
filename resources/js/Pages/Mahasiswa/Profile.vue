@@ -1,10 +1,11 @@
 <script setup>
 import MahasiswaLayout from '@/Layouts/MahasiswaLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { Camera, Save, Square } from 'lucide-vue-next';
+import { Camera, ScanFace, Save, Square } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref } from 'vue';
 
 let faceapi = null;
+let detectionIntervalId = null;
 
 const props = defineProps({
     profile: {
@@ -25,6 +26,14 @@ const cameraActive = ref(false);
 const statusMessage = ref('');
 const previewImage = ref(null);
 const samples = ref([]);
+const faceCount = ref(null);
+const detectingFace = ref(false);
+const captureProcessing = ref(false);
+const faceQuality = ref({
+    canCapture: false,
+    message: '',
+    status: 'idle',
+});
 
 const form = useForm({
     image_base64: '',
@@ -33,7 +42,66 @@ const form = useForm({
 
 const registrationStatus = computed(() => props.profile.wajah_terdaftar ? 'Terdaftar' : 'Belum terdaftar');
 const canSave = computed(() => form.image_base64 && form.face_descriptor.length === props.faceConfig.descriptorLength);
+const hasCapturedFace = computed(() => Boolean(previewImage.value && canSave.value));
 const secureCameraContext = computed(() => window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname));
+const canCapture = computed(() => cameraActive.value && modelsLoaded.value && faceQuality.value.canCapture && !captureProcessing.value);
+const qualityReady = computed(() => faceQuality.value.status === 'ready');
+
+const captureButtonLabel = computed(() => {
+    if (captureProcessing.value) {
+        return 'Mengambil wajah...';
+    }
+
+    if (!cameraActive.value) {
+        return hasCapturedFace.value ? 'Foto siap disimpan' : 'Nyalakan kamera dulu';
+    }
+
+    if (detectingFace.value && faceCount.value === null) {
+        return 'Mencari wajah...';
+    }
+
+    if (hasCapturedFace.value && faceCount.value !== 1) {
+        return 'Foto siap disimpan';
+    }
+
+    if (faceQuality.value.message && !faceQuality.value.canCapture) {
+        return faceQuality.value.status === 'searching' ? 'Mencari wajah...' : faceQuality.value.message;
+    }
+
+    if (faceCount.value === 0) {
+        return 'Wajah belum ditemukan';
+    }
+
+    if (faceCount.value > 1) {
+        return 'Terdeteksi lebih dari satu wajah';
+    }
+
+    if (faceQuality.value.canCapture) {
+        return hasCapturedFace.value ? 'Ambil ulang foto' : 'Ambil foto wajah';
+    }
+
+    return 'Mencari wajah...';
+});
+
+const cameraStatusText = computed(() => {
+    if (statusMessage.value) {
+        return statusMessage.value;
+    }
+
+    if (hasCapturedFace.value) {
+        return 'Foto wajah sudah siap. Tekan Simpan wajah untuk menyelesaikan pendaftaran.';
+    }
+
+    if (!cameraActive.value) {
+        return 'Nyalakan kamera, posisikan wajah di tengah frame, lalu ambil wajah saat tombol sudah aktif.';
+    }
+
+    if (faceQuality.value.message) {
+        return faceQuality.value.message;
+    }
+
+    return 'Mencari wajah di kamera.';
+});
 
 const getFaceApi = async () => {
     if (!faceapi) {
@@ -86,7 +154,8 @@ const startCamera = async () => {
         videoRef.value.srcObject = stream.value;
         await videoRef.value.play();
         cameraActive.value = true;
-        statusMessage.value = 'Kamera aktif.';
+        statusMessage.value = '';
+        startFaceDetection();
     } catch (error) {
         if (error?.name === 'NotAllowedError') {
             statusMessage.value = 'Izin kamera ditolak.';
@@ -99,9 +168,160 @@ const startCamera = async () => {
 };
 
 const stopCamera = () => {
+    stopFaceDetection();
     stream.value?.getTracks().forEach((track) => track.stop());
     stream.value = null;
     cameraActive.value = false;
+    faceCount.value = null;
+    detectingFace.value = false;
+    faceQuality.value = {
+        canCapture: false,
+        message: '',
+        status: 'idle',
+    };
+};
+
+const faceBox = (detection) => detection?.detection?.box ?? detection?.box;
+
+const qualityResult = (status, message, canCapture = false) => ({
+    canCapture,
+    message,
+    status,
+});
+
+const sampleFaceQuality = (video, box) => {
+    const canvas = document.createElement('canvas');
+    const size = 96;
+    const paddingX = box.width * 0.12;
+    const paddingY = box.height * 0.12;
+    const sourceX = Math.max(0, box.x - paddingX);
+    const sourceY = Math.max(0, box.y - paddingY);
+    const sourceWidth = Math.min(video.videoWidth - sourceX, box.width + paddingX * 2);
+    const sourceHeight = Math.min(video.videoHeight - sourceY, box.height + paddingY * 2);
+
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, size, size);
+
+    const data = context.getImageData(0, 0, size, size).data;
+    const grayscale = new Array(size * size);
+    let luminanceTotal = 0;
+
+    for (let index = 0, pixel = 0; index < data.length; index += 4, pixel += 1) {
+        const luminance = (0.299 * data[index]) + (0.587 * data[index + 1]) + (0.114 * data[index + 2]);
+        grayscale[pixel] = luminance;
+        luminanceTotal += luminance;
+    }
+
+    const averageLuminance = luminanceTotal / grayscale.length;
+    let sharpnessTotal = 0;
+    let sharpnessCount = 0;
+
+    for (let y = 1; y < size - 1; y += 1) {
+        for (let x = 1; x < size - 1; x += 1) {
+            const center = grayscale[(y * size) + x] * 4;
+            const contrast = Math.abs(
+                center
+                - grayscale[(y * size) + x - 1]
+                - grayscale[(y * size) + x + 1]
+                - grayscale[((y - 1) * size) + x]
+                - grayscale[((y + 1) * size) + x],
+            );
+
+            sharpnessTotal += contrast;
+            sharpnessCount += 1;
+        }
+    }
+
+    return {
+        brightness: averageLuminance,
+        sharpness: sharpnessTotal / sharpnessCount,
+    };
+};
+
+const evaluateFaceQuality = (detections) => {
+    const video = videoRef.value;
+    faceCount.value = detections.length;
+
+    if (!video || detections.length === 0) {
+        return qualityResult('no_face', 'Wajah belum ditemukan. Posisikan wajah di tengah kamera.');
+    }
+
+    if (detections.length > 1) {
+        return qualityResult('multiple_faces', 'Terdeteksi lebih dari satu wajah. Pastikan hanya wajah kamu yang terlihat.');
+    }
+
+    const box = faceBox(detections[0]);
+
+    if (!box || !video.videoWidth || !video.videoHeight) {
+        return qualityResult('searching', 'Mencari wajah di kamera.');
+    }
+
+    const widthRatio = box.width / video.videoWidth;
+    const heightRatio = box.height / video.videoHeight;
+
+    if (widthRatio < 0.18 || heightRatio < 0.24) {
+        return qualityResult('too_small', 'Wajah terlalu jauh. Dekatkan wajah ke kamera.');
+    }
+
+    const faceCenterX = box.x + (box.width / 2);
+    const faceCenterY = box.y + (box.height / 2);
+    const centerOffsetX = Math.abs(faceCenterX - (video.videoWidth / 2)) / video.videoWidth;
+    const centerOffsetY = Math.abs(faceCenterY - (video.videoHeight / 2)) / video.videoHeight;
+
+    if (centerOffsetX > 0.22 || centerOffsetY > 0.24) {
+        return qualityResult('off_center', 'Posisikan wajah di tengah frame.');
+    }
+
+    const quality = sampleFaceQuality(video, box);
+
+    if (quality.brightness < 58) {
+        return qualityResult('too_dark', 'Wajah terlalu gelap. Cari tempat dengan cahaya lebih terang.');
+    }
+
+    if (quality.sharpness < 4.5) {
+        return qualityResult('blurry', 'Gambar kurang jelas. Tahan kamera tetap stabil.');
+    }
+
+    return qualityResult('ready', 'Wajah terlihat jelas. Kamu bisa mengambil foto wajah.', true);
+};
+
+const detectFacePresence = async () => {
+    if (!cameraActive.value || !videoRef.value || !modelsLoaded.value || detectingFace.value || captureProcessing.value) {
+        return;
+    }
+
+    detectingFace.value = true;
+
+    try {
+        const api = await getFaceApi();
+        const detections = await api.detectAllFaces(
+            videoRef.value,
+            new api.SsdMobilenetv1Options({ minConfidence: 0.5 }),
+        );
+
+        faceQuality.value = evaluateFaceQuality(detections);
+    } catch {
+        statusMessage.value = 'Deteksi wajah gagal. Coba nyalakan ulang kamera.';
+    } finally {
+        detectingFace.value = false;
+    }
+};
+
+const startFaceDetection = () => {
+    stopFaceDetection();
+    faceCount.value = null;
+    faceQuality.value = qualityResult('searching', 'Mencari wajah di kamera.');
+    detectFacePresence();
+    detectionIntervalId = window.setInterval(detectFacePresence, 900);
+};
+
+const stopFaceDetection = () => {
+    if (detectionIntervalId) {
+        window.clearInterval(detectionIntervalId);
+        detectionIntervalId = null;
+    }
 };
 
 const captureFace = async () => {
@@ -110,37 +330,55 @@ const captureFace = async () => {
         return;
     }
 
+    if (!canCapture.value) {
+        return;
+    }
+
+    captureProcessing.value = true;
     statusMessage.value = 'Mendeteksi wajah.';
     const api = await getFaceApi();
 
-    const detections = await api
-        .detectAllFaces(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-        .withFaceLandmarks()
-        .withFaceDescriptors();
+    try {
+        const detections = await api
+            .detectAllFaces(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            .withFaceLandmarks()
+            .withFaceDescriptors();
 
-    if (detections.length === 0) {
-        statusMessage.value = 'Wajah tidak terdeteksi.';
-        return;
+        faceCount.value = detections.length;
+        const quality = evaluateFaceQuality(detections);
+        faceQuality.value = quality;
+
+        if (!quality.canCapture) {
+            statusMessage.value = quality.message;
+            return;
+        }
+
+        if (detections.length === 0) {
+            statusMessage.value = 'Wajah tidak terdeteksi. Coba dekatkan wajah ke kamera.';
+            return;
+        }
+
+        if (detections.length > 1) {
+            statusMessage.value = 'Terdeteksi lebih dari satu wajah. Pastikan hanya wajah kamu yang terlihat.';
+            return;
+        }
+
+        const canvas = canvasRef.value;
+        canvas.width = videoRef.value.videoWidth;
+        canvas.height = videoRef.value.videoHeight;
+        canvas.getContext('2d').drawImage(videoRef.value, 0, 0, canvas.width, canvas.height);
+
+        const image = canvas.toDataURL('image/jpeg', 0.9);
+        const descriptor = Array.from(detections[0].descriptor);
+
+        samples.value = [...samples.value, descriptor].slice(-3);
+        form.image_base64 = image;
+        form.face_descriptor = averageDescriptor(samples.value);
+        previewImage.value = image;
+        statusMessage.value = 'Foto wajah sudah siap. Tekan Simpan wajah untuk menyelesaikan pendaftaran.';
+    } finally {
+        captureProcessing.value = false;
     }
-
-    if (detections.length > 1) {
-        statusMessage.value = 'Terdeteksi lebih dari satu wajah.';
-        return;
-    }
-
-    const canvas = canvasRef.value;
-    canvas.width = videoRef.value.videoWidth;
-    canvas.height = videoRef.value.videoHeight;
-    canvas.getContext('2d').drawImage(videoRef.value, 0, 0, canvas.width, canvas.height);
-
-    const image = canvas.toDataURL('image/jpeg', 0.9);
-    const descriptor = Array.from(detections[0].descriptor);
-
-    samples.value = [...samples.value, descriptor].slice(-3);
-    form.image_base64 = image;
-    form.face_descriptor = averageDescriptor(samples.value);
-    previewImage.value = image;
-    statusMessage.value = `Wajah tersimpan sementara (${samples.value.length}/3).`;
 };
 
 const averageDescriptor = (items) => {
@@ -197,7 +435,12 @@ onBeforeUnmount(() => {
             <section class="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
                 <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <h2 class="text-base font-semibold text-zinc-950">Daftarkan wajah</h2>
+                        <div>
+                            <h2 class="text-base font-semibold text-zinc-950">Daftarkan wajah</h2>
+                            <p class="mt-1 text-sm text-zinc-500">
+                                Gunakan pencahayaan cukup dan pastikan hanya satu wajah terlihat.
+                            </p>
+                        </div>
                         <div class="flex gap-2">
                             <button
                                 class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
@@ -206,15 +449,16 @@ onBeforeUnmount(() => {
                             >
                                 <Square v-if="cameraActive" class="h-4 w-4" />
                                 <Camera v-else class="h-4 w-4" />
-                                {{ cameraActive ? 'Stop' : 'Kamera' }}
+                                {{ cameraActive ? 'Matikan kamera' : 'Nyalakan kamera' }}
                             </button>
                             <button
-                                class="rounded-md bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+                                class="inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
                                 type="button"
-                                :disabled="!cameraActive"
+                                :disabled="!canCapture"
                                 @click="captureFace"
                             >
-                                Ambil
+                                <ScanFace class="h-4 w-4" />
+                                {{ captureButtonLabel }}
                             </button>
                         </div>
                     </div>
@@ -224,19 +468,40 @@ onBeforeUnmount(() => {
                         <canvas ref="canvasRef" class="hidden" />
                     </div>
 
-                    <p class="mt-3 text-sm text-zinc-600">{{ statusMessage || 'Kamera belum aktif.' }}</p>
+                    <div
+                        class="mt-3 rounded-md border px-4 py-3 text-sm font-medium"
+                        :class="qualityReady ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-zinc-50 text-zinc-700'"
+                    >
+                        {{ cameraStatusText }}
+                    </div>
                     <p v-if="form.errors.image_base64" class="mt-2 text-sm text-red-600">{{ form.errors.image_base64 }}</p>
                     <p v-if="form.errors.face_descriptor" class="mt-2 text-sm text-red-600">{{ form.errors.face_descriptor }}</p>
                 </article>
 
                 <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-                    <h2 class="text-base font-semibold text-zinc-950">Preview</h2>
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-base font-semibold text-zinc-950">Preview</h2>
+                            <p class="mt-1 text-sm text-zinc-500">
+                                Pastikan foto wajah terlihat jelas sebelum disimpan.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                            :class="hasCapturedFace ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-100 text-zinc-600'"
+                        >
+                            {{ hasCapturedFace ? 'Siap disimpan' : 'Belum ada foto' }}
+                        </span>
+                    </div>
                     <div class="mt-5 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100">
                         <img v-if="previewImage" :src="previewImage" alt="Preview wajah" class="aspect-video w-full object-cover">
                         <div v-else class="flex aspect-video items-center justify-center text-sm text-zinc-500">
                             Belum ada preview.
                         </div>
                     </div>
+                    <p class="mt-3 text-sm font-medium" :class="hasCapturedFace ? 'text-emerald-700' : 'text-zinc-500'">
+                        {{ hasCapturedFace ? 'Foto sudah siap. Simpan untuk mengaktifkan presensi wajah.' : 'Ambil foto wajah terlebih dahulu.' }}
+                    </p>
 
                     <button
                         class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"

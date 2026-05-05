@@ -135,7 +135,7 @@ class FaceAttendanceVerificationTest extends TestCase
                 'face_descriptor' => array_fill(0, 128, 0.2),
             ])
             ->assertUnprocessable()
-            ->assertJsonPath('message', 'Liveness detection belum valid. Ikuti instruksi kedip dan menoleh, lalu coba lagi.');
+            ->assertJsonPath('message', 'Liveness detection belum valid. Ikuti instruksi buka mulut dan menoleh, lalu coba lagi.');
     }
 
     public function test_face_verification_rejects_stale_liveness_challenge(): void
@@ -151,7 +151,7 @@ class FaceAttendanceVerificationTest extends TestCase
                 'liveness' => $staleLiveness,
             ])
             ->assertUnprocessable()
-            ->assertJsonPath('message', 'Liveness detection belum valid. Ikuti instruksi kedip dan menoleh, lalu coba lagi.');
+            ->assertJsonPath('message', 'Liveness detection belum valid. Ikuti instruksi buka mulut dan menoleh, lalu coba lagi.');
     }
 
     public function test_non_matching_face_descriptor_tracks_attempts_and_then_fails(): void
@@ -315,7 +315,7 @@ class FaceAttendanceVerificationTest extends TestCase
     {
         return [
             'id' => 'test-liveness',
-            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'steps' => ['mouth_open', 'turn_left'],
             'issued_at' => now()->toIso8601String(),
             'expires_at' => now()->addMinutes(5)->toIso8601String(),
         ];
@@ -328,7 +328,7 @@ class FaceAttendanceVerificationTest extends TestCase
     {
         return [
             'challenge_id' => 'test-liveness',
-            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'steps' => ['mouth_open', 'turn_left'],
             'completed_at' => now()->toIso8601String(),
         ];
     }

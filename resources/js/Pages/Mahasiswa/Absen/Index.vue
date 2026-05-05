@@ -4,7 +4,7 @@ import MahasiswaLayout from '@/Layouts/MahasiswaLayout.vue';
 import axios from 'axios';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { computed, onBeforeUnmount, ref } from 'vue';
-import { Camera, CameraOff, CheckCircle2, ScanLine, UserCircle } from 'lucide-vue-next';
+import { AlertCircle, Camera, CameraOff, CheckCircle2, ScanLine, UserCircle } from 'lucide-vue-next';
 
 const props = defineProps({
     faceRegistered: {
@@ -27,10 +27,24 @@ const scanning = ref(false);
 const processing = ref(false);
 const error = ref('');
 const status = ref('');
-const lastScan = ref('');
 
 const canScan = computed(() => props.faceRegistered && props.activeSessions.length > 0 && !processing.value);
 const secureCameraContext = computed(() => window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname));
+const scannerHelperText = computed(() => {
+    if (error.value) {
+        return 'Minta dosen menampilkan QR terbaru, lalu tekan Mulai untuk scan ulang.';
+    }
+
+    if (processing.value) {
+        return 'QR sedang divalidasi.';
+    }
+
+    if (scanning.value) {
+        return 'Arahkan kamera ke QR yang sedang aktif di layar dosen.';
+    }
+
+    return 'Tekan Mulai, lalu arahkan kamera ke QR yang sedang aktif.';
+});
 
 const qrbox = (viewfinderWidth, viewfinderHeight) => {
     const edge = Math.min(viewfinderWidth, viewfinderHeight);
@@ -131,8 +145,7 @@ const onScanSuccess = async (decodedText) => {
     }
 
     processing.value = true;
-    lastScan.value = decodedText;
-    status.value = 'QR terbaca.';
+    status.value = 'QR terbaca. Memvalidasi...';
     error.value = '';
     await stopScanner();
 
@@ -149,7 +162,12 @@ const onScanSuccess = async (decodedText) => {
             ? 'Koneksi terputus saat validasi QR.'
             : 'QR tidak dapat diverifikasi.';
 
-        error.value = validationMessage ?? verifyError.response?.data?.message ?? fallbackMessage;
+        const message = validationMessage ?? verifyError.response?.data?.message ?? fallbackMessage;
+
+        status.value = '';
+        error.value = message.includes('kedaluwarsa') || message.includes('tidak valid')
+            ? 'QR tidak valid atau sudah kedaluwarsa. Gunakan QR terbaru dari dosen.'
+            : message;
         processing.value = false;
     }
 };
@@ -233,9 +251,20 @@ onBeforeUnmount(() => {
                             <CheckCircle2 class="h-4 w-4" />
                             {{ status }}
                         </p>
-                        <p v-if="error" class="status-error">{{ error }}</p>
-                        <p v-if="lastScan && error" class="break-all rounded-md bg-zinc-50 p-3 text-xs text-zinc-500">
-                            {{ lastScan }}
+                        <div
+                            v-if="error"
+                            class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800"
+                        >
+                            <div class="flex gap-2">
+                                <AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+                                <div>
+                                    <p>{{ error }}</p>
+                                    <p class="mt-1 text-rose-700">{{ scannerHelperText }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else class="text-sm text-zinc-500">
+                            {{ scannerHelperText }}
                         </p>
                     </div>
                 </article>

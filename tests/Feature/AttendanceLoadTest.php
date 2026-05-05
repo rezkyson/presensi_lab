@@ -115,7 +115,7 @@ class AttendanceLoadTest extends TestCase
     {
         return [
             'id' => 'load-test-liveness',
-            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'steps' => ['mouth_open', 'turn_left'],
             'issued_at' => now()->toIso8601String(),
             'expires_at' => now()->addMinutes(5)->toIso8601String(),
         ];
@@ -128,7 +128,7 @@ class AttendanceLoadTest extends TestCase
     {
         return [
             'challenge_id' => 'load-test-liveness',
-            'steps' => ['blink', 'turn_left', 'turn_right'],
+            'steps' => ['mouth_open', 'turn_left'],
             'completed_at' => now()->toIso8601String(),
         ];
     }

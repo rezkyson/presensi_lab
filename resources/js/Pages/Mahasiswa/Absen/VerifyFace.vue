@@ -48,8 +48,6 @@ const livenessDetail = ref('');
 const livenessBaseline = ref(null);
 const neutralSamples = ref([]);
 const activeGesture = ref(null);
-const firstTurnSign = ref(null);
-const centerReturnedSeen = ref(false);
 let livenessTimeoutId = null;
 let livenessExpiryTimeoutId = null;
 
@@ -57,11 +55,9 @@ const secureCameraContext = computed(() => window.isSecureContext || ['localhost
 const LIVENESS_CHECK_INTERVAL = 180;
 const LIVENESS_CALIBRATION_SAMPLES = 5;
 const TURN_DELTA_THRESHOLD = 0.1;
-const TURN_CENTER_DELTA = 0.05;
 const livenessLabels = {
-    blink: 'Kedip / buka mulut',
+    mouth_open: 'Buka mulut',
     turn_left: 'Menoleh ke satu sisi',
-    turn_right: 'Menoleh ke sisi sebaliknya',
 };
 const livenessSteps = computed(() => (props.livenessChallenge.steps ?? []).map((step) => ({
     key: step,
@@ -115,8 +111,6 @@ const resetLiveness = () => {
     livenessBaseline.value = null;
     neutralSamples.value = [];
     activeGesture.value = null;
-    firstTurnSign.value = null;
-    centerReturnedSeen.value = false;
     livenessMessage.value = livenessSteps.value.length
         ? 'Hadapkan wajah lurus ke kamera untuk kalibrasi.'
         : '';
@@ -211,7 +205,7 @@ const calibrateLiveness = (metrics) => {
     livenessDetail.value = `Kalibrasi ${neutralSamples.value.length}/${LIVENESS_CALIBRATION_SAMPLES}.`;
 
     if (neutralSamples.value.length < LIVENESS_CALIBRATION_SAMPLES) {
-        livenessMessage.value = 'Hadapkan wajah lurus ke kamera, mata terbuka normal.';
+        livenessMessage.value = 'Hadapkan wajah lurus ke kamera.';
         return false;
     }
 
@@ -224,16 +218,8 @@ const calibrateLiveness = (metrics) => {
 
 const detectActiveGesture = (metrics) => {
     const baseline = livenessBaseline.value;
-    const closedEyeThreshold = Math.max(0.12, Math.min(0.2, baseline.ear * 0.72));
-    const reopenedEyeThreshold = Math.max(closedEyeThreshold + 0.03, baseline.ear * 0.88);
     const openMouthThreshold = Math.max(0.22, baseline.mouth * 2.2);
     const closedMouthThreshold = Math.max(0.12, baseline.mouth * 1.4);
-
-    if (!activeGesture.value && metrics.ear <= closedEyeThreshold) {
-        activeGesture.value = 'blink';
-        livenessMessage.value = 'Buka mata kembali.';
-        return false;
-    }
 
     if (!activeGesture.value && metrics.mouth >= openMouthThreshold) {
         activeGesture.value = 'mouth';
@@ -241,68 +227,37 @@ const detectActiveGesture = (metrics) => {
         return false;
     }
 
-    if (activeGesture.value === 'blink') {
-        return metrics.ear >= reopenedEyeThreshold;
-    }
-
     if (activeGesture.value === 'mouth') {
         return metrics.mouth <= closedMouthThreshold;
     }
 
-    livenessMessage.value = 'Kedipkan mata atau buka mulut sebentar.';
+    livenessMessage.value = 'Buka mulut sebentar, lalu tutup kembali.';
 
     return false;
 };
 
 const detectHeadTurn = (metrics, step) => {
     const delta = metrics.turn - livenessBaseline.value.turn;
-    const sign = Math.sign(delta);
     const progress = Math.min(Math.round((Math.abs(delta) / TURN_DELTA_THRESHOLD) * 100), 100);
 
-    if (step === 'turn_right') {
-        if (firstTurnSign.value === null) {
-            return false;
-        }
-
-        if (!centerReturnedSeen.value) {
-            if (Math.abs(delta) <= TURN_CENTER_DELTA) {
-                centerReturnedSeen.value = true;
-                livenessMessage.value = 'Sekarang menoleh ke sisi sebaliknya.';
-            } else {
-                livenessMessage.value = 'Kembali hadap lurus dulu.';
-            }
-
-            return false;
-        }
-    }
-
-    if (Math.abs(delta) < TURN_DELTA_THRESHOLD || sign === 0) {
-        livenessMessage.value = step === 'turn_left'
-            ? `Menoleh ke satu sisi sedikit lebih jauh (${progress}%).`
-            : `Menoleh ke sisi sebaliknya sedikit lebih jauh (${progress}%).`;
+    if (Math.abs(delta) < TURN_DELTA_THRESHOLD) {
+        livenessMessage.value = `Menoleh ke satu sisi sedikit lebih jauh (${progress}%).`;
         return false;
     }
 
     if (step === 'turn_left') {
-        firstTurnSign.value = sign;
-        centerReturnedSeen.value = false;
         return true;
-    }
-
-    if (sign !== -firstTurnSign.value) {
-        livenessMessage.value = 'Menoleh ke arah yang berlawanan dari gerakan pertama.';
-        return false;
     }
 
     return true;
 };
 
 const livenessStepPassed = (step, metrics) => {
-    if (step === 'blink') {
+    if (step === 'mouth_open') {
         return detectActiveGesture(metrics);
     }
 
-    if (step === 'turn_left' || step === 'turn_right') {
+    if (step === 'turn_left') {
         return detectHeadTurn(metrics, step);
     }
 
@@ -327,11 +282,7 @@ const completeLivenessStep = () => {
         return;
     }
 
-    if (currentLivenessStep.value?.key === 'turn_right') {
-        livenessMessage.value = 'Kembali hadap lurus dulu, lalu menoleh ke sisi sebaliknya.';
-    } else {
-        livenessMessage.value = `Ikuti instruksi: ${currentLivenessStep.value?.label}.`;
-    }
+    livenessMessage.value = `Ikuti instruksi: ${currentLivenessStep.value?.label}.`;
 };
 
 const runLivenessCheck = async () => {
@@ -364,7 +315,7 @@ const runLivenessCheck = async () => {
             return;
         }
 
-        livenessDetail.value = `Mata ${metrics.ear.toFixed(2)} | Mulut ${metrics.mouth.toFixed(2)} | Gerak ${Math.abs(metrics.turn - livenessBaseline.value.turn).toFixed(2)}`;
+        livenessDetail.value = `Langkah ${currentLivenessIndex.value + 1} dari ${livenessSteps.value.length}.`;
 
         if (currentLivenessStep.value && livenessStepPassed(currentLivenessStep.value.key, metrics)) {
             completeLivenessStep();
@@ -561,7 +512,7 @@ onBeforeUnmount(() => {
                             >
                                 <Square v-if="cameraActive" class="h-4 w-4" />
                                 <Camera v-else class="h-4 w-4" />
-                                {{ cameraActive ? 'Stop' : 'Kamera' }}
+                                {{ cameraActive ? 'Matikan kamera' : 'Nyalakan kamera' }}
                             </button>
                             <button
                                 type="button"
@@ -597,7 +548,7 @@ onBeforeUnmount(() => {
                                 {{ livenessPassed ? 'Valid' : 'Belum valid' }}
                             </span>
                         </div>
-                        <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                        <div class="mt-4 grid gap-2 sm:grid-cols-2">
                             <div
                                 v-for="(step, index) in livenessSteps"
                                 :key="step.key"

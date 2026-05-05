@@ -29,7 +29,7 @@ class AbsensiController extends Controller
 
     private const MAX_FACE_ATTEMPTS = 3;
 
-    private const LIVENESS_STEPS = ['blink', 'turn_left', 'turn_right'];
+    private const LIVENESS_STEPS = ['mouth_open', 'turn_left'];
 
     public function index(Request $request): Response
     {
@@ -250,7 +250,7 @@ class AbsensiController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Liveness detection belum valid. Ikuti instruksi kedip dan menoleh, lalu coba lagi.',
+                'message' => 'Liveness detection belum valid. Ikuti instruksi buka mulut dan menoleh, lalu coba lagi.',
             ], 422);
         }
 
