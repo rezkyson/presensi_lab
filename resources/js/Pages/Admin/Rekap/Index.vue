@@ -35,9 +35,9 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
 
     <AdminLayout>
         <div class="space-y-6">
-            <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <header class="content-hero flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="text-sm font-medium text-emerald-700">Rekap Admin</p>
+                    <p class="eyebrow">Rekap Admin</p>
                     <h1 class="mt-1 text-2xl font-semibold text-zinc-950">Laporan presensi</h1>
                     <p class="mt-2 text-sm text-zinc-600">
                         Filter presensi berdasarkan kelas, mahasiswa, dosen, tanggal, mata kuliah, dan status.
@@ -45,14 +45,14 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row">
                     <a
-                        class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                        class="btn-secondary"
                         :href="exportUrl('pdf')"
                     >
                         <Download class="h-4 w-4" />
                         PDF
                     </a>
                     <a
-                        class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                        class="btn-primary"
                         :href="exportUrl('excel')"
                     >
                         <FileSpreadsheet class="h-4 w-4" />
@@ -62,17 +62,17 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
             </header>
 
             <section class="grid gap-4 md:grid-cols-5">
-                <article v-for="(value, key) in stats" :key="key" class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article v-for="(value, key) in stats" :key="key" class="metric-tile">
                     <p class="text-sm font-medium capitalize text-zinc-600">{{ key.replace('_', ' ') }}</p>
                     <p class="mt-3 text-3xl font-semibold text-zinc-950">{{ value }}</p>
                 </article>
             </section>
 
-            <form class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm" method="get" action="/admin/rekap">
+            <form class="ios-filter-bar" method="get" action="/admin/rekap">
                 <div class="grid gap-4 md:grid-cols-4">
                     <label class="text-sm font-medium text-zinc-700">
                         Kelas
-                        <select name="kelas_id" class="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2">
+                        <select name="kelas_id" class="form-input mt-1 py-2">
                             <option value="">Semua kelas</option>
                             <option v-for="kelas in options.kelas" :key="kelas.id" :value="kelas.id" :selected="String(filters.kelas_id ?? '') === String(kelas.id)">
                                 {{ kelas.nama_kelas }} - {{ kelas.prodi }}
@@ -81,7 +81,7 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
                     </label>
                     <label class="text-sm font-medium text-zinc-700">
                         Mahasiswa
-                        <select name="mahasiswa_id" class="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2">
+                        <select name="mahasiswa_id" class="form-input mt-1 py-2">
                             <option value="">Semua mahasiswa</option>
                             <option v-for="mahasiswa in options.mahasiswa" :key="mahasiswa.id" :value="mahasiswa.id" :selected="String(filters.mahasiswa_id ?? '') === String(mahasiswa.id)">
                                 {{ mahasiswa.name }} - {{ mahasiswa.nim }}
@@ -90,7 +90,7 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
                     </label>
                     <label class="text-sm font-medium text-zinc-700">
                         Dosen
-                        <select name="dosen_id" class="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2">
+                        <select name="dosen_id" class="form-input mt-1 py-2">
                             <option value="">Semua dosen</option>
                             <option v-for="dosen in options.dosen" :key="dosen.id" :value="dosen.id" :selected="String(filters.dosen_id ?? '') === String(dosen.id)">
                                 {{ dosen.name }} - {{ dosen.nip }}
@@ -99,7 +99,7 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
                     </label>
                     <label class="text-sm font-medium text-zinc-700">
                         Status
-                        <select name="status" class="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2">
+                        <select name="status" class="form-input mt-1 py-2">
                             <option value="">Semua status</option>
                             <option v-for="status in ['hadir', 'tidak_hadir', 'izin', 'sakit']" :key="status" :value="status" :selected="filters.status === status">
                                 {{ status.replace('_', ' ') }}
@@ -108,32 +108,32 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
                     </label>
                     <label class="text-sm font-medium text-zinc-700">
                         Mata kuliah
-                        <input name="mata_kuliah" :value="filters.mata_kuliah" class="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2" placeholder="Cari mata kuliah">
+                        <input name="mata_kuliah" :value="filters.mata_kuliah" class="form-input mt-1 py-2" placeholder="Cari mata kuliah">
                     </label>
                     <label class="text-sm font-medium text-zinc-700">
                         Dari tanggal
-                        <input name="date_from" type="date" :value="filters.date_from" class="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2">
+                        <input name="date_from" type="date" :value="filters.date_from" class="form-input mt-1 py-2">
                     </label>
                     <label class="text-sm font-medium text-zinc-700">
                         Sampai tanggal
-                        <input name="date_to" type="date" :value="filters.date_to" class="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2">
+                        <input name="date_to" type="date" :value="filters.date_to" class="form-input mt-1 py-2">
                     </label>
                     <div class="flex items-end gap-2">
-                        <button class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white" type="submit">
+                        <button class="btn-dark w-full" type="submit">
                             <Search class="h-4 w-4" />
                             Filter
                         </button>
-                        <Link class="rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800" href="/admin/rekap">
+                        <Link class="btn-secondary" href="/admin/rekap">
                             Reset
                         </Link>
                     </div>
                 </div>
             </form>
 
-            <section class="rounded-lg border border-zinc-200 bg-white shadow-sm">
+            <section class="table-shell">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-zinc-200 text-sm">
-                        <thead class="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs font-semibold text-zinc-500">
                             <tr>
                                 <th class="px-5 py-3">Tanggal</th>
                                 <th class="px-5 py-3">Mahasiswa</th>
@@ -144,7 +144,7 @@ const exportUrl = (type) => `/admin/rekap/export/${type}${queryString.value ? `?
                                 <th class="px-5 py-3">Waktu</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-200">
+                        <tbody class="divide-y divide-black/5">
                             <tr v-for="record in records.data" :key="record.id">
                                 <td class="px-5 py-4">{{ record.tanggal }}</td>
                                 <td class="px-5 py-4 font-semibold text-zinc-950">{{ record.mahasiswa }}<br><span class="font-normal text-zinc-500">{{ record.nim }}</span></td>

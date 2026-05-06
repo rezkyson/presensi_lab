@@ -166,16 +166,16 @@ onBeforeUnmount(() => {
 
     <DosenLayout>
         <div class="space-y-6">
-            <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <header class="content-hero flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <Link
-                        class="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 hover:text-zinc-950"
+                        class="inline-flex items-center gap-2 text-sm font-semibold text-white/65 transition hover:text-white"
                         href="/dosen/monitor"
                     >
                         <ArrowLeft class="h-4 w-4" />
                         Kembali
                     </Link>
-                    <p class="mt-4 text-sm font-medium text-emerald-700">Monitor Presensi</p>
+                    <p class="eyebrow mt-4">Monitor Presensi</p>
                     <h1 class="mt-1 text-2xl font-semibold text-zinc-950">{{ session.mata_kuliah }}</h1>
                     <p class="mt-2 text-sm text-zinc-600">
                         {{ session.kelas?.nama_kelas }} &middot; {{ session.ruangan }} &middot;
@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
                 </div>
                 <button
                     type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="btn-secondary"
                     :disabled="loading"
                     @click="refreshAttendance"
                 >
@@ -194,39 +194,39 @@ onBeforeUnmount(() => {
             </header>
 
             <section class="grid gap-4 md:grid-cols-6">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="metric-tile">
                     <p class="text-sm font-medium text-zinc-600">Peserta</p>
                     <p class="mt-3 text-3xl font-semibold text-zinc-950">{{ summary.total ?? 0 }}</p>
                 </article>
-                <article class="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+                <article class="metric-tile border-emerald-100 bg-emerald-50/90">
                     <p class="flex items-center gap-2 text-sm font-medium text-emerald-800">
                         <UserCheck class="h-4 w-4" />
                         Hadir
                     </p>
                     <p class="mt-3 text-3xl font-semibold text-emerald-950">{{ summary.hadir ?? 0 }}</p>
                 </article>
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="metric-tile">
                     <p class="flex items-center gap-2 text-sm font-medium text-zinc-600">
                         <Clock class="h-4 w-4" />
                         Belum
                     </p>
                     <p class="mt-3 text-3xl font-semibold text-zinc-950">{{ summary.belum_hadir ?? 0 }}</p>
                 </article>
-                <article class="rounded-lg border border-rose-200 bg-rose-50 p-5">
+                <article class="metric-tile border-rose-100 bg-rose-50/90">
                     <p class="flex items-center gap-2 text-sm font-medium text-rose-800">
                         <UserX class="h-4 w-4" />
                         Alpa
                     </p>
                     <p class="mt-3 text-3xl font-semibold text-rose-950">{{ summary.tidak_hadir ?? 0 }}</p>
                 </article>
-                <article class="rounded-lg border border-sky-200 bg-sky-50 p-5">
+                <article class="metric-tile border-sky-100 bg-sky-50/90">
                     <p class="flex items-center gap-2 text-sm font-medium text-sky-800">
                         <CheckCircle2 class="h-4 w-4" />
                         Izin
                     </p>
                     <p class="mt-3 text-3xl font-semibold text-sky-950">{{ summary.izin ?? 0 }}</p>
                 </article>
-                <article class="rounded-lg border border-amber-200 bg-amber-50 p-5">
+                <article class="metric-tile border-amber-100 bg-amber-50/90">
                     <p class="flex items-center gap-2 text-sm font-medium text-amber-800">
                         <HeartPulse class="h-4 w-4" />
                         Sakit
@@ -235,12 +235,12 @@ onBeforeUnmount(() => {
                 </article>
             </section>
 
-            <p v-if="error" class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+            <p v-if="error" class="status-error">
                 {{ error }}
             </p>
 
-            <section class="rounded-lg border border-zinc-200 bg-white shadow-sm">
-                <div class="border-b border-zinc-200 p-5">
+            <section class="table-shell">
+                <div class="ios-list-row flex-col">
                     <h2 class="text-base font-semibold text-zinc-950">Daftar peserta</h2>
                     <p class="mt-1 text-sm text-zinc-500">
                         Terakhir diperbarui {{ attendanceState.last_updated_at }}.
@@ -251,8 +251,8 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-zinc-200 text-sm">
-                        <thead class="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs font-semibold text-zinc-500">
                             <tr>
                                 <th class="px-5 py-3">Mahasiswa</th>
                                 <th class="px-5 py-3">NIM</th>
@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
                                 <th class="px-5 py-3">Verifikasi dosen</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-200 bg-white">
+                        <tbody class="divide-y divide-black/5">
                             <tr v-for="participant in participants" :key="participant.mahasiswa_id">
                                 <td class="px-5 py-4 font-semibold text-zinc-950">{{ participant.nama }}</td>
                                 <td class="px-5 py-4 text-zinc-600">{{ participant.nim }}</td>
@@ -279,7 +279,7 @@ onBeforeUnmount(() => {
                                 <td class="px-5 py-4">
                                     <select
                                         v-if="participant.status !== 'hadir'"
-                                        class="min-w-36 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-500"
+                                        class="form-input min-w-36 py-2"
                                         :value="participant.status === 'belum_hadir' ? '' : participant.status"
                                         :disabled="!sessionClosed || updatingParticipants.has(participant.mahasiswa_id)"
                                         @change="updateParticipantStatus(participant, $event.target.value)"
@@ -304,7 +304,7 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <section class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <section class="ios-list p-5">
                 <div class="flex flex-col gap-2 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
                     <p>Polling aktif setiap {{ pollingMs / 1000 }} detik.</p>
                     <p>{{ broadcastingEnabled ? 'Broadcast siap dipakai jika Echo tersambung.' : 'Broadcast belum dikonfigurasi; polling tetap aktif.' }}</p>

@@ -13,10 +13,10 @@ const icons = {
 };
 
 const styles = {
-    success: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-    error: 'border-rose-200 bg-rose-50 text-rose-950',
-    warning: 'border-amber-200 bg-amber-50 text-amber-950',
-    info: 'border-sky-200 bg-sky-50 text-sky-950',
+    success: 'ring-1 ring-emerald-100',
+    error: 'ring-1 ring-rose-100',
+    warning: 'ring-1 ring-amber-100',
+    info: 'ring-1 ring-sky-100',
 };
 
 const iconStyles = {
@@ -48,7 +48,7 @@ const visibleToasts = computed(() => toasts.value);
                 <div
                     v-for="toast in visibleToasts"
                     :key="toast.id"
-                    class="pointer-events-auto flex gap-3 rounded-lg border p-4 shadow-lg shadow-zinc-950/10"
+                    class="pointer-events-auto flex gap-3 rounded-lg border border-white/75 bg-white/90 p-4 text-zinc-950 shadow-apple-card backdrop-blur-2xl"
                     :class="styles[toast.variant] ?? styles.info"
                     role="status"
                 >

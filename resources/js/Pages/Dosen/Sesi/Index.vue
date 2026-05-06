@@ -28,9 +28,9 @@ const openSession = (schedule) => {
 
     <DosenLayout>
         <div class="space-y-6">
-            <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <header class="content-hero flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-medium text-emerald-700">Sesi Absensi</p>
+                    <p class="eyebrow">Sesi Absensi</p>
                     <h1 class="mt-1 text-2xl font-semibold text-zinc-950">Buka sesi dan tampilkan QR</h1>
                     <p class="mt-2 text-sm text-zinc-600">
                         Hari ini {{ todayName }}. Token QR otomatis diganti setiap 60 detik.
@@ -39,9 +39,9 @@ const openSession = (schedule) => {
             </header>
 
             <section class="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Daftar jadwal dosen</h2>
-                    <div v-if="schedules.length" class="mt-4 divide-y divide-zinc-200">
+                    <div v-if="schedules.length" class="mt-4 divide-y divide-black/5">
                         <div
                             v-for="schedule in schedules"
                             :key="schedule.id"
@@ -51,7 +51,7 @@ const openSession = (schedule) => {
                                 <div class="flex flex-wrap items-center gap-2">
                                     <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
                                     <span
-                                        class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                                        class="ios-chip"
                                         :class="{
                                             'bg-emerald-100 text-emerald-800': schedule.schedule_status === 'ongoing' && !schedule.completed_session_id,
                                             'bg-amber-100 text-amber-800': schedule.schedule_status === 'upcoming' && !schedule.completed_session_id,
@@ -63,13 +63,13 @@ const openSession = (schedule) => {
                                     </span>
                                     <span
                                         v-if="schedule.active_session_id"
-                                        class="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800"
+                                        class="ios-chip bg-sky-100 text-sky-800"
                                     >
                                         Aktif
                                     </span>
                                     <span
                                         v-if="schedule.completed_session_id"
-                                        class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700"
+                                        class="ios-chip"
                                     >
                                         Selesai
                                     </span>
@@ -98,7 +98,7 @@ const openSession = (schedule) => {
                             <div class="flex flex-col gap-2 sm:flex-row">
                                 <Link
                                     v-if="schedule.active_session_id"
-                                    class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                                    class="btn-secondary"
                                     :href="`/dosen/sesi/${schedule.active_session_id}/qr`"
                                 >
                                     <QrCode class="h-4 w-4" />
@@ -106,7 +106,7 @@ const openSession = (schedule) => {
                                 </Link>
                                 <Link
                                     v-if="schedule.active_session_id"
-                                    class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                                    class="btn-secondary"
                                     :href="`/dosen/sesi/${schedule.active_session_id}/monitor`"
                                 >
                                     <Activity class="h-4 w-4" />
@@ -115,7 +115,7 @@ const openSession = (schedule) => {
                                 <button
                                     v-if="!schedule.active_session_id"
                                     type="button"
-                                    class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 enabled:bg-emerald-700 enabled:text-white enabled:hover:bg-emerald-800"
+                                    class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 enabled:bg-apple-blue enabled:text-white enabled:hover:bg-apple-blue-700"
                                     :disabled="!schedule.can_open_session"
                                     @click="openSession(schedule)"
                                 >
@@ -125,18 +125,18 @@ const openSession = (schedule) => {
                             </div>
                         </div>
                     </div>
-                    <div v-else class="mt-4 rounded-md border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">
+                    <div v-else class="empty-state mt-4">
                         Belum ada jadwal yang diampu.
                     </div>
                 </article>
 
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Sesi aktif</h2>
                     <div v-if="activeSessions.length" class="mt-4 space-y-3">
                         <div
                             v-for="session in activeSessions"
                             :key="session.id"
-                            class="rounded-md border border-emerald-200 bg-emerald-50 p-4"
+                            class="apple-subcard border-emerald-100 bg-emerald-50/90 p-4"
                         >
                             <p class="font-semibold text-emerald-950">{{ session.mata_kuliah }}</p>
                             <p class="mt-1 text-sm text-emerald-800">
@@ -161,7 +161,7 @@ const openSession = (schedule) => {
                             </Link>
                         </div>
                     </div>
-                    <div v-else class="mt-4 rounded-md border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">
+                    <div v-else class="empty-state mt-4">
                         Belum ada sesi absensi aktif.
                     </div>
                 </article>

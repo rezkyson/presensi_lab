@@ -16,17 +16,17 @@ defineProps({
 
     <DosenLayout>
         <div class="space-y-6">
-            <header>
-                <p class="text-sm font-medium text-emerald-700">Monitor</p>
+            <header class="content-hero">
+                <p class="eyebrow">Monitor</p>
                 <h1 class="mt-1 text-2xl font-semibold text-zinc-950">Pantau sesi presensi</h1>
                 <p class="mt-2 text-sm text-zinc-600">
                     Pilih sesi untuk melihat status kehadiran peserta kelas.
                 </p>
             </header>
 
-            <section class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <section class="apple-card p-5">
                 <h2 class="text-base font-semibold text-zinc-950">Sesi terbaru</h2>
-                <div v-if="sessions.length" class="mt-4 divide-y divide-zinc-200">
+                <div v-if="sessions.length" class="mt-4 divide-y divide-black/5">
                     <div
                         v-for="session in sessions"
                         :key="session.id"
@@ -36,7 +36,7 @@ defineProps({
                             <div class="flex flex-wrap items-center gap-2">
                                 <p class="font-semibold text-zinc-950">{{ session.mata_kuliah }}</p>
                                 <span
-                                    class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                                    class="ios-chip"
                                     :class="session.status === 'aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-100 text-zinc-700'"
                                 >
                                     {{ session.status }}
@@ -51,7 +51,7 @@ defineProps({
                             </p>
                         </div>
                         <Link
-                            class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                            class="btn-primary"
                             :href="`/dosen/sesi/${session.id}/monitor`"
                         >
                             <ExternalLink class="h-4 w-4" />
@@ -59,12 +59,12 @@ defineProps({
                         </Link>
                     </div>
                 </div>
-                <div v-else class="mt-4 rounded-md border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">
+                <div v-else class="empty-state mt-4">
                     Belum ada sesi presensi.
                 </div>
             </section>
 
-            <section class="rounded-lg border border-sky-200 bg-sky-50 p-5 text-sky-950">
+            <section class="apple-subcard border-sky-100 bg-sky-50/90 p-5 text-sky-950">
                 <div class="flex gap-3">
                     <Activity class="mt-0.5 h-5 w-5 text-sky-700" />
                     <p class="text-sm text-sky-800">

@@ -12,7 +12,7 @@ const navigation = [
 </script>
 
 <template>
-    <RoleLayout title="Mahasiswa" subtitle="Presensi dan riwayat kehadiran" :navigation="navigation">
+    <RoleLayout title="Mahasiswa" subtitle="Presensi dan riwayat kehadiran" :navigation="navigation" mobile-navigation>
         <slot />
     </RoleLayout>
 </template>

@@ -32,16 +32,16 @@ const openSession = (schedule) => {
 
     <DosenLayout>
         <div class="space-y-6">
-            <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <header class="content-hero flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-medium text-emerald-700">Dashboard Dosen</p>
+                    <p class="eyebrow">Dashboard Dosen</p>
                     <h1 class="mt-1 text-2xl font-semibold text-zinc-950">Jadwal mengajar</h1>
                     <p class="mt-2 text-sm text-zinc-600">
                         Hari ini {{ todayName }}.
                     </p>
                 </div>
                 <Link
-                    class="touch-target inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                    class="btn-primary"
                     href="/dosen/sesi"
                 >
                     <CalendarPlus class="h-4 w-4" />
@@ -50,20 +50,20 @@ const openSession = (schedule) => {
             </header>
 
             <section class="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Jadwal hari ini</h2>
                     <div v-if="todaySchedules.length" class="mt-4 space-y-3">
                         <div
                             v-for="schedule in todaySchedules"
                             :key="schedule.id"
-                            class="rounded-md border border-zinc-200 p-4"
+                            class="apple-subcard p-4"
                         >
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <div class="flex flex-wrap items-center gap-2">
                                         <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
                                         <span
-                                            class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                                            class="ios-chip"
                                             :class="{
                                                 'bg-emerald-100 text-emerald-800': schedule.schedule_status === 'ongoing' && !schedule.completed_session_id,
                                                 'bg-amber-100 text-amber-800': schedule.schedule_status === 'upcoming' && !schedule.completed_session_id,
@@ -101,7 +101,7 @@ const openSession = (schedule) => {
                                 </div>
                                 <Link
                                     v-if="schedule.active_session_id"
-                                    class="touch-target inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                                    class="btn-secondary"
                                     :href="`/dosen/sesi/${schedule.active_session_id}/qr`"
                                 >
                                     <QrCode class="h-4 w-4" />
@@ -110,7 +110,7 @@ const openSession = (schedule) => {
                                 <button
                                     v-else
                                     type="button"
-                                    class="touch-target inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 enabled:bg-emerald-700 enabled:text-white enabled:hover:bg-emerald-800"
+                                    class="touch-target inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 enabled:bg-apple-blue enabled:text-white enabled:hover:bg-apple-blue-700"
                                     :disabled="!schedule.can_open_session"
                                     @click="openSession(schedule)"
                                 >
@@ -125,13 +125,13 @@ const openSession = (schedule) => {
                     </div>
                 </article>
 
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Sesi aktif</h2>
                     <div v-if="activeSessions.length" class="mt-4 space-y-3">
                         <div
                             v-for="session in activeSessions"
                             :key="session.id"
-                            class="rounded-md border border-emerald-200 bg-emerald-50 p-4"
+                            class="apple-subcard border-emerald-100 bg-emerald-50/90 p-4"
                         >
                             <p class="font-semibold text-emerald-950">{{ session.mata_kuliah }}</p>
                             <p class="mt-1 text-sm text-emerald-800">
@@ -159,13 +159,13 @@ const openSession = (schedule) => {
                 </article>
             </section>
 
-            <section class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <section class="apple-card p-5">
                 <h2 class="text-base font-semibold text-zinc-950">Jadwal mendatang</h2>
                 <div v-if="upcomingSchedules.length" class="mt-4 grid gap-3 md:grid-cols-2">
                     <div
                         v-for="schedule in upcomingSchedules"
                         :key="schedule.id"
-                        class="rounded-md border border-zinc-200 p-4"
+                        class="apple-subcard p-4"
                     >
                         <p class="font-semibold text-zinc-950">{{ schedule.mata_kuliah }}</p>
                         <p class="mt-1 text-sm text-zinc-600">

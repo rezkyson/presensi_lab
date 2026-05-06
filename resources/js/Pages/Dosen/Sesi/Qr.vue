@@ -70,10 +70,10 @@ onBeforeUnmount(() => {
 
     <DosenLayout>
         <div class="min-h-[calc(100vh-9rem)] space-y-5">
-            <header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <header class="content-hero flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <Link
-                        class="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 hover:text-zinc-950"
+                        class="inline-flex items-center gap-2 text-sm font-semibold text-white/65 transition hover:text-white"
                         href="/dosen/sesi"
                     >
                         <ArrowLeft class="h-4 w-4" />
@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row">
                     <Link
-                        class="touch-target inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                        class="btn-secondary"
                         :href="`/dosen/sesi/${session.id}/monitor`"
                     >
                         <Activity class="h-4 w-4" />
@@ -95,7 +95,7 @@ onBeforeUnmount(() => {
                     </Link>
                     <button
                         type="button"
-                        class="touch-target inline-flex items-center justify-center gap-2 rounded-md bg-rose-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-800"
+                        class="btn-danger"
                         @click="closeSession"
                     >
                         <Square class="h-4 w-4" />
@@ -105,9 +105,9 @@ onBeforeUnmount(() => {
             </header>
 
             <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-                <article class="flex min-h-[65vh] items-center justify-center rounded-lg border border-zinc-200 bg-white p-3 shadow-sm sm:p-5">
+                <article class="apple-card flex min-h-[65vh] items-center justify-center p-3 sm:p-5">
                     <div class="w-full text-center">
-                        <div class="mx-auto aspect-square w-full max-w-[min(78vh,720px)] rounded-lg border border-zinc-200 bg-white p-3 sm:p-5">
+                        <div class="mx-auto aspect-square w-full max-w-[min(78vh,720px)] rounded-lg bg-white p-3 shadow-inner sm:p-5">
                             <img
                                 v-if="qrData.data_uri"
                                 class="h-full w-full object-contain"
@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
                     </div>
                 </article>
 
-                <aside class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <aside class="apple-card p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Detail sesi</h2>
                     <dl class="mt-4 space-y-4 text-sm">
                         <div>
@@ -151,7 +151,7 @@ onBeforeUnmount(() => {
 
                     <button
                         type="button"
-                        class="touch-target mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="btn-secondary mt-6 w-full"
                         :disabled="loading"
                         @click="refreshQr"
                     >

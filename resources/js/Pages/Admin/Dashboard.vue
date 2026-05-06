@@ -38,8 +38,8 @@ const attendanceLabels = [
 
     <AdminLayout>
         <div class="space-y-6">
-            <header>
-                <p class="text-sm font-medium text-emerald-700">Dashboard Admin</p>
+            <header class="content-hero">
+                <p class="eyebrow">Dashboard Admin</p>
                 <h1 class="mt-1 text-2xl font-semibold text-zinc-950">Ringkasan sistem</h1>
                 <p class="mt-2 max-w-2xl text-sm text-zinc-600">
                     Pantau data utama dan aktivitas presensi hari ini.
@@ -50,24 +50,24 @@ const attendanceLabels = [
                 <article
                     v-for="card in statCards"
                     :key="card.label"
-                    class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
+                    class="metric-tile"
                 >
                     <div class="flex items-center justify-between">
                         <p class="text-sm font-medium text-zinc-600">{{ card.label }}</p>
-                        <component :is="card.icon" class="h-5 w-5 text-emerald-700" />
+                        <component :is="card.icon" class="h-5 w-5 text-apple-blue" />
                     </div>
                     <p class="mt-4 text-3xl font-semibold text-zinc-950">{{ card.value }}</p>
                 </article>
             </section>
 
             <section class="grid gap-6 xl:grid-cols-[1fr_1.4fr]">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="ios-list p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Presensi hari ini</h2>
                     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                         <div
                             v-for="item in attendanceLabels"
                             :key="item.key"
-                            class="flex items-center justify-between rounded-md border border-zinc-200 px-4 py-3"
+                            class="flex items-center justify-between rounded-lg bg-zinc-100/75 px-4 py-3"
                         >
                             <span :class="['rounded-full px-2.5 py-1 text-xs font-semibold', item.tone]">
                                 {{ item.label }}
@@ -79,7 +79,7 @@ const attendanceLabels = [
                     </div>
                 </article>
 
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="table-shell p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Jadwal terbaru</h2>
                     <div v-if="recentSchedules.length" class="mt-4 overflow-x-auto">
                         <table class="min-w-full text-left text-sm">

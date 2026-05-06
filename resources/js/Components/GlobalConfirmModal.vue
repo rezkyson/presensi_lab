@@ -14,13 +14,13 @@ const icons = {
 
 const iconClasses = {
     danger: 'bg-rose-100 text-rose-700',
-    primary: 'bg-emerald-100 text-emerald-700',
+    primary: 'bg-apple-blue-50 text-apple-blue',
     neutral: 'bg-zinc-100 text-zinc-700',
 };
 
 const confirmButtonClasses = {
     danger: 'bg-rose-700 text-white hover:bg-rose-800 focus:ring-rose-700/30',
-    primary: 'bg-emerald-700 text-white hover:bg-emerald-800 focus:ring-emerald-700/30',
+    primary: 'bg-apple-blue text-white hover:bg-apple-blue-700 focus:ring-apple-blue/30',
     neutral: 'bg-zinc-900 text-white hover:bg-zinc-800 focus:ring-zinc-900/30',
 };
 
@@ -78,7 +78,7 @@ onBeforeUnmount(() => {
                     leave-to-class="translate-y-2 scale-95 opacity-0"
                 >
                     <section
-                        class="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-5 shadow-2xl shadow-zinc-950/20"
+                        class="apple-glass w-full max-w-md p-5"
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="global-confirm-title"
@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
                     >
                         <div class="flex items-start gap-4">
                             <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
                                 :class="iconClasses[confirmState.variant] ?? iconClasses.neutral"
                             >
                                 <component :is="modalIcon" class="h-5 w-5" />
@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
 
                         <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                             <button
-                                class="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400/30"
+                                class="btn-secondary"
                                 type="button"
                                 @click="cancel"
                             >

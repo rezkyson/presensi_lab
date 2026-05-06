@@ -6,6 +6,8 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { Camera, CheckCircle2, RotateCcw, ScanFace, Square } from 'lucide-vue-next';
 
 let faceapi = null;
+let modelsLoadingPromise = null;
+let descriptorLoadingPromise = null;
 
 const props = defineProps({
     session: {
@@ -80,16 +82,31 @@ const loadModels = async () => {
         return;
     }
 
+    if (modelsLoadingPromise) {
+        await modelsLoadingPromise;
+        return;
+    }
+
     statusMessage.value = 'Memuat model wajah.';
-    const api = await getFaceApi();
+    modelsLoadingPromise = (async () => {
+        const api = await getFaceApi();
 
-    await Promise.all([
-        api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
-        api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
-        api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
-    ]);
+        await Promise.all([
+            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
+        ]);
 
-    modelsLoaded.value = true;
+        modelsLoaded.value = true;
+    })();
+
+    try {
+        await modelsLoadingPromise;
+    } finally {
+        if (!modelsLoaded.value) {
+            modelsLoadingPromise = null;
+        }
+    }
 };
 
 const loadRegisteredDescriptor = async () => {
@@ -97,8 +114,23 @@ const loadRegisteredDescriptor = async () => {
         return;
     }
 
-    const response = await axios.get('/mahasiswa/face-descriptor');
-    registeredDescriptor.value = response.data.descriptor.map(Number);
+    if (descriptorLoadingPromise) {
+        await descriptorLoadingPromise;
+        return;
+    }
+
+    descriptorLoadingPromise = axios.get('/mahasiswa/face-descriptor')
+        .then((response) => {
+            registeredDescriptor.value = response.data.descriptor.map(Number);
+        });
+
+    try {
+        await descriptorLoadingPromise;
+    } finally {
+        if (!registeredDescriptor.value) {
+            descriptorLoadingPromise = null;
+        }
+    }
 };
 
 const resetLiveness = () => {
@@ -346,9 +378,13 @@ const startCamera = async () => {
         return;
     }
 
-    try {
-        await Promise.all([loadModels(), loadRegisteredDescriptor()]);
+    const modelsPromise = loadModels();
+    const descriptorPromise = loadRegisteredDescriptor();
+    modelsPromise.catch(() => {});
+    descriptorPromise.catch(() => {});
+    statusMessage.value = 'Mengaktifkan kamera.';
 
+    try {
         if (!navigator.mediaDevices?.getUserMedia) {
             errorMessage.value = 'Kamera tidak tersedia di browser ini.';
             return;
@@ -357,8 +393,9 @@ const startCamera = async () => {
         stream.value = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: 'user',
-                width: { ideal: 640 },
-                height: { ideal: 480 },
+                width: { ideal: 720 },
+                height: { ideal: 720 },
+                aspectRatio: { ideal: 1 },
             },
             audio: false,
         });
@@ -366,18 +403,34 @@ const startCamera = async () => {
         videoRef.value.srcObject = stream.value;
         await videoRef.value.play();
         cameraActive.value = true;
-        statusMessage.value = 'Kamera aktif. Selesaikan liveness terlebih dahulu.';
-        startLivenessChallenge();
+        statusMessage.value = modelsLoaded.value && registeredDescriptor.value
+            ? 'Kamera aktif. Selesaikan liveness terlebih dahulu.'
+            : 'Kamera aktif. Memuat data wajah.';
     } catch (error) {
-        if (!error.response && error.request) {
-            errorMessage.value = 'Koneksi terputus saat memuat data wajah.';
-        } else if (error?.name === 'NotAllowedError') {
+        if (error?.name === 'NotAllowedError') {
             errorMessage.value = 'Izin kamera ditolak.';
         } else if (error?.name === 'NotFoundError') {
             errorMessage.value = 'Kamera tidak tersedia.';
         } else {
-            errorMessage.value = 'Kamera, model wajah, atau descriptor tersimpan gagal dimuat.';
+            errorMessage.value = 'Kamera gagal dibuka.';
         }
+
+        return;
+    }
+
+    try {
+        await Promise.all([modelsPromise, descriptorPromise]);
+
+        if (!cameraActive.value) {
+            return;
+        }
+
+        statusMessage.value = 'Kamera aktif. Selesaikan liveness terlebih dahulu.';
+        startLivenessChallenge();
+    } catch (error) {
+        errorMessage.value = (!error.response && error.request)
+            ? 'Koneksi terputus saat memuat data wajah.'
+            : 'Model wajah atau descriptor tersimpan gagal dimuat.';
     }
 };
 
@@ -478,16 +531,16 @@ onBeforeUnmount(() => {
 
     <MahasiswaLayout>
         <div class="space-y-6">
-            <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <header class="content-hero flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-medium text-emerald-700">Verifikasi Wajah</p>
+                    <p class="eyebrow">Verifikasi Wajah</p>
                     <h1 class="mt-1 text-2xl font-semibold text-zinc-950">{{ session.mata_kuliah }}</h1>
                     <p class="mt-2 text-sm text-zinc-600">
                         QR valid sampai {{ verificationExpiresAt }}.
                     </p>
                 </div>
                 <Link
-                    class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                    class="btn-secondary"
                     href="/mahasiswa/absen"
                 >
                     <RotateCcw class="h-4 w-4" />
@@ -496,7 +549,7 @@ onBeforeUnmount(() => {
             </header>
 
             <section class="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 class="text-base font-semibold text-zinc-950">Kamera depan</h2>
@@ -507,7 +560,7 @@ onBeforeUnmount(() => {
                         <div class="flex gap-2">
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                                class="btn-secondary px-3 py-2"
                                 @click="cameraActive ? stopCamera() : startCamera()"
                             >
                                 <Square v-if="cameraActive" class="h-4 w-4" />
@@ -516,7 +569,7 @@ onBeforeUnmount(() => {
                             </button>
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-600"
+                                class="btn-primary px-3 py-2"
                                 :disabled="!canVerify"
                                 @click="verifyFace"
                             >
@@ -527,7 +580,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div class="mt-5 overflow-hidden rounded-lg bg-zinc-950">
-                        <video ref="videoRef" class="aspect-video w-full object-cover" muted playsinline />
+                        <video ref="videoRef" class="aspect-square w-full object-cover" autoplay muted playsinline />
                     </div>
 
                     <div class="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
@@ -574,7 +627,7 @@ onBeforeUnmount(() => {
                 </article>
 
                 <aside class="space-y-6">
-                    <section class="rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+                    <section class="apple-subcard border-emerald-100 bg-emerald-50/90 p-5 text-emerald-950">
                         <div class="flex items-start gap-3">
                             <CheckCircle2 class="mt-0.5 h-5 w-5 text-emerald-700" />
                             <div>
@@ -586,7 +639,7 @@ onBeforeUnmount(() => {
                         </div>
                     </section>
 
-                    <section class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                    <section class="apple-card p-5">
                         <h2 class="text-base font-semibold text-zinc-950">Detail sesi</h2>
                         <dl class="mt-4 space-y-4 text-sm">
                             <div>

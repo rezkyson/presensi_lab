@@ -75,16 +75,16 @@ const detachDosen = async (dosen) => {
 
     <AdminLayout>
         <div class="space-y-6">
-            <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <header class="content-hero flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-medium text-emerald-700">Detail kelas</p>
+                    <p class="eyebrow">Detail kelas</p>
                     <h1 class="mt-1 text-2xl font-semibold text-zinc-950">{{ kelas.nama_kelas }}</h1>
                     <p class="mt-2 text-sm text-zinc-600">
-                        {{ kelas.prodi }} · Semester {{ kelas.semester }} · {{ kelas.tahun_akademik }}
+                        {{ kelas.prodi }} &middot; Semester {{ kelas.semester }} &middot; {{ kelas.tahun_akademik }}
                     </p>
                 </div>
                 <Link
-                    class="inline-flex items-center justify-center rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
+                    class="btn-secondary py-2"
                     href="/admin/kelas"
                 >
                     Kembali
@@ -92,27 +92,27 @@ const detachDosen = async (dosen) => {
             </header>
 
             <section class="grid gap-4 md:grid-cols-3">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="metric-tile">
                     <p class="text-sm font-medium text-zinc-600">Mahasiswa</p>
                     <p class="mt-3 text-3xl font-semibold text-zinc-950">{{ kelas.mahasiswa_count ?? kelas.mahasiswa.length }}</p>
                 </article>
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="metric-tile">
                     <p class="text-sm font-medium text-zinc-600">Dosen pengampu</p>
                     <p class="mt-3 text-3xl font-semibold text-zinc-950">{{ kelas.dosen_count ?? kelas.dosen.length }}</p>
                 </article>
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="metric-tile">
                     <p class="text-sm font-medium text-zinc-600">Jadwal</p>
                     <p class="mt-3 text-3xl font-semibold text-zinc-950">{{ kelas.jadwal_count ?? 0 }}</p>
                 </article>
             </section>
 
             <section class="grid gap-6 xl:grid-cols-2">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Peserta mahasiswa</h2>
                     <form class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]" @submit.prevent="attachMahasiswa">
                         <select
                             v-model="mahasiswaForm.mahasiswa_id"
-                            class="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                            class="form-input"
                         >
                             <option value="">Pilih mahasiswa</option>
                             <option v-for="mahasiswa in mahasiswaOptions" :key="mahasiswa.id" :value="mahasiswa.id">
@@ -120,13 +120,13 @@ const detachDosen = async (dosen) => {
                             </option>
                         </select>
                         <button
-                            class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                            class="btn-primary py-2 disabled:opacity-60"
                             type="submit"
                             :disabled="mahasiswaForm.processing"
                         >
                             Tambah
                         </button>
-                        <p v-if="mahasiswaForm.errors.mahasiswa_id" class="text-sm text-red-600 sm:col-span-2">
+                        <p v-if="mahasiswaForm.errors.mahasiswa_id" class="form-error sm:col-span-2">
                             {{ mahasiswaForm.errors.mahasiswa_id }}
                         </p>
                     </form>
@@ -148,7 +148,7 @@ const detachDosen = async (dosen) => {
                                     </td>
                                     <td class="py-3 pr-4 text-zinc-600">{{ mahasiswa.prodi }}</td>
                                     <td class="py-3 text-right">
-                                        <button class="rounded-md border border-red-200 p-2 text-red-700 transition hover:bg-red-50" type="button" @click="detachMahasiswa(mahasiswa)">
+                                        <button class="ios-danger-action" type="button" @click="detachMahasiswa(mahasiswa)">
                                             <Trash2 class="h-4 w-4" />
                                         </button>
                                     </td>
@@ -156,17 +156,17 @@ const detachDosen = async (dosen) => {
                             </tbody>
                         </table>
                     </div>
-                    <div v-else class="mt-5 rounded-md border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">
+                    <div v-else class="empty-state mt-5">
                         Belum ada mahasiswa di kelas ini.
                     </div>
                 </article>
 
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <h2 class="text-base font-semibold text-zinc-950">Dosen pengampu</h2>
                     <form class="mt-4 grid gap-3" @submit.prevent="attachDosen">
                         <select
                             v-model="dosenForm.dosen_id"
-                            class="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                            class="form-input"
                         >
                             <option value="">Pilih dosen</option>
                             <option v-for="dosen in dosenOptions" :key="dosen.id" :value="dosen.id">
@@ -175,12 +175,12 @@ const detachDosen = async (dosen) => {
                         </select>
                         <input
                             v-model="dosenForm.mata_kuliah"
-                            class="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                            class="form-input"
                             placeholder="Mata kuliah"
                             type="text"
                         >
                         <button
-                            class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                            class="btn-primary py-2 disabled:opacity-60"
                             type="submit"
                             :disabled="dosenForm.processing"
                         >
@@ -194,19 +194,19 @@ const detachDosen = async (dosen) => {
                         <div
                             v-for="dosen in kelas.dosen"
                             :key="dosen.pivot_id"
-                            class="flex items-start justify-between gap-4 rounded-md border border-zinc-200 p-4"
+                            class="apple-subcard flex items-start justify-between gap-4 p-4"
                         >
                             <div>
                                 <p class="font-semibold text-zinc-950">{{ dosen.name }}</p>
                                 <p class="mt-1 text-sm text-zinc-600">{{ dosen.mata_kuliah }}</p>
                                 <p class="mt-1 text-xs text-zinc-500">{{ dosen.nip }}</p>
                             </div>
-                            <button class="rounded-md border border-red-200 p-2 text-red-700 transition hover:bg-red-50" type="button" @click="detachDosen(dosen)">
+                            <button class="ios-danger-action" type="button" @click="detachDosen(dosen)">
                                 <Trash2 class="h-4 w-4" />
                             </button>
                         </div>
                     </div>
-                    <div v-else class="mt-5 rounded-md border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">
+                    <div v-else class="empty-state mt-5">
                         Belum ada dosen pengampu untuk kelas ini.
                     </div>
                 </article>

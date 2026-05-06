@@ -6,6 +6,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 
 let faceapi = null;
 let detectionIntervalId = null;
+let modelsLoadingPromise = null;
 
 const props = defineProps({
     profile: {
@@ -116,16 +117,31 @@ const loadModels = async () => {
         return;
     }
 
+    if (modelsLoadingPromise) {
+        await modelsLoadingPromise;
+        return;
+    }
+
     statusMessage.value = 'Memuat model wajah.';
-    const api = await getFaceApi();
+    modelsLoadingPromise = (async () => {
+        const api = await getFaceApi();
 
-    await Promise.all([
-        api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
-        api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
-        api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
-    ]);
+        await Promise.all([
+            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
+        ]);
 
-    modelsLoaded.value = true;
+        modelsLoaded.value = true;
+    })();
+
+    try {
+        await modelsLoadingPromise;
+    } finally {
+        if (!modelsLoaded.value) {
+            modelsLoadingPromise = null;
+        }
+    }
 };
 
 const startCamera = async () => {
@@ -134,9 +150,11 @@ const startCamera = async () => {
         return;
     }
 
-    try {
-        await loadModels();
+    const modelsPromise = loadModels();
+    modelsPromise.catch(() => {});
+    statusMessage.value = 'Mengaktifkan kamera.';
 
+    try {
         if (!navigator.mediaDevices?.getUserMedia) {
             statusMessage.value = 'Kamera tidak tersedia di browser ini.';
             return;
@@ -145,8 +163,9 @@ const startCamera = async () => {
         stream.value = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: 'user',
-                width: { ideal: 640 },
-                height: { ideal: 480 },
+                width: { ideal: 720 },
+                height: { ideal: 720 },
+                aspectRatio: { ideal: 1 },
             },
             audio: false,
         });
@@ -154,16 +173,30 @@ const startCamera = async () => {
         videoRef.value.srcObject = stream.value;
         await videoRef.value.play();
         cameraActive.value = true;
-        statusMessage.value = '';
-        startFaceDetection();
+        statusMessage.value = modelsLoaded.value ? '' : 'Kamera aktif. Memuat model wajah.';
     } catch (error) {
         if (error?.name === 'NotAllowedError') {
             statusMessage.value = 'Izin kamera ditolak.';
         } else if (error?.name === 'NotFoundError') {
             statusMessage.value = 'Kamera tidak tersedia.';
         } else {
-            statusMessage.value = 'Kamera atau model wajah gagal dimuat.';
+            statusMessage.value = 'Kamera gagal dibuka.';
         }
+
+        return;
+    }
+
+    try {
+        await modelsPromise;
+
+        if (!cameraActive.value) {
+            return;
+        }
+
+        statusMessage.value = '';
+        startFaceDetection();
+    } catch (error) {
+        statusMessage.value = 'Model wajah gagal dimuat. Coba nyalakan ulang kamera.';
     }
 };
 
@@ -364,9 +397,22 @@ const captureFace = async () => {
         }
 
         const canvas = canvasRef.value;
-        canvas.width = videoRef.value.videoWidth;
-        canvas.height = videoRef.value.videoHeight;
-        canvas.getContext('2d').drawImage(videoRef.value, 0, 0, canvas.width, canvas.height);
+        const sourceSize = Math.min(videoRef.value.videoWidth, videoRef.value.videoHeight);
+        const sourceX = (videoRef.value.videoWidth - sourceSize) / 2;
+        const sourceY = (videoRef.value.videoHeight - sourceSize) / 2;
+        canvas.width = sourceSize;
+        canvas.height = sourceSize;
+        canvas.getContext('2d').drawImage(
+            videoRef.value,
+            sourceX,
+            sourceY,
+            sourceSize,
+            sourceSize,
+            0,
+            0,
+            sourceSize,
+            sourceSize,
+        );
 
         const image = canvas.toDataURL('image/jpeg', 0.9);
         const descriptor = Array.from(detections[0].descriptor);
@@ -408,32 +454,32 @@ onBeforeUnmount(() => {
     <Head title="Profil Mahasiswa" />
 
     <MahasiswaLayout>
-        <div class="space-y-6">
-            <header>
-                <p class="text-sm font-medium text-emerald-700">Profil</p>
+        <div class="mobile-app-surface space-y-5">
+            <header class="content-hero">
+                <p class="eyebrow">Profil</p>
                 <h1 class="mt-1 text-2xl font-semibold text-zinc-950">{{ profile.name }}</h1>
-                <p class="mt-2 text-sm text-zinc-600">{{ profile.nim }} · {{ profile.prodi }} · Angkatan {{ profile.angkatan }}</p>
+                <p class="mt-2 text-sm text-zinc-600">{{ profile.nim }} &middot; {{ profile.prodi }} &middot; Angkatan {{ profile.angkatan }}</p>
             </header>
 
-            <section class="grid gap-4 md:grid-cols-3">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-medium text-zinc-600">Email</p>
-                    <p class="mt-3 font-semibold text-zinc-950">{{ profile.email }}</p>
-                </article>
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-medium text-zinc-600">Status wajah</p>
-                    <p class="mt-3 font-semibold" :class="profile.wajah_terdaftar ? 'text-emerald-700' : 'text-amber-700'">
+            <section class="ios-list">
+                <div class="ios-list-row">
+                    <p class="text-sm font-medium text-apple-secondary">Email</p>
+                    <p class="max-w-[62%] truncate text-right text-sm font-semibold text-zinc-950">{{ profile.email }}</p>
+                </div>
+                <div class="ios-list-row">
+                    <p class="text-sm font-medium text-apple-secondary">Status wajah</p>
+                    <p class="text-sm font-semibold" :class="profile.wajah_terdaftar ? 'text-emerald-700' : 'text-amber-700'">
                         {{ registrationStatus }}
                     </p>
-                </article>
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-medium text-zinc-600">Terakhir diperbarui</p>
-                    <p class="mt-3 font-semibold text-zinc-950">{{ profile.face_registered_at ?? '-' }}</p>
-                </article>
+                </div>
+                <div class="ios-list-row">
+                    <p class="text-sm font-medium text-apple-secondary">Terakhir diperbarui</p>
+                    <p class="text-right text-sm font-semibold text-zinc-950">{{ profile.face_registered_at ?? '-' }}</p>
+                </div>
             </section>
 
             <section class="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 class="text-base font-semibold text-zinc-950">Daftarkan wajah</h2>
@@ -443,7 +489,7 @@ onBeforeUnmount(() => {
                         </div>
                         <div class="flex gap-2">
                             <button
-                                class="inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
+                                class="btn-secondary px-3 py-2"
                                 type="button"
                                 @click="cameraActive ? stopCamera() : startCamera()"
                             >
@@ -452,7 +498,7 @@ onBeforeUnmount(() => {
                                 {{ cameraActive ? 'Matikan kamera' : 'Nyalakan kamera' }}
                             </button>
                             <button
-                                class="inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
+                                class="btn-dark px-3 py-2"
                                 type="button"
                                 :disabled="!canCapture"
                                 @click="captureFace"
@@ -464,7 +510,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div class="mt-5 overflow-hidden rounded-lg bg-zinc-950">
-                        <video ref="videoRef" class="aspect-video w-full object-cover" muted playsinline />
+                        <video ref="videoRef" class="aspect-square w-full object-cover" autoplay muted playsinline />
                         <canvas ref="canvasRef" class="hidden" />
                     </div>
 
@@ -478,7 +524,7 @@ onBeforeUnmount(() => {
                     <p v-if="form.errors.face_descriptor" class="mt-2 text-sm text-red-600">{{ form.errors.face_descriptor }}</p>
                 </article>
 
-                <article class="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+                <article class="apple-card p-5">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <h2 class="text-base font-semibold text-zinc-950">Preview</h2>
@@ -494,8 +540,8 @@ onBeforeUnmount(() => {
                         </span>
                     </div>
                     <div class="mt-5 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100">
-                        <img v-if="previewImage" :src="previewImage" alt="Preview wajah" class="aspect-video w-full object-cover">
-                        <div v-else class="flex aspect-video items-center justify-center text-sm text-zinc-500">
+                        <img v-if="previewImage" :src="previewImage" alt="Preview wajah" class="aspect-square w-full object-cover">
+                        <div v-else class="flex aspect-square items-center justify-center text-sm text-zinc-500">
                             Belum ada preview.
                         </div>
                     </div>
@@ -504,7 +550,7 @@ onBeforeUnmount(() => {
                     </p>
 
                     <button
-                        class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                        class="btn-primary mt-5 w-full"
                         type="button"
                         :disabled="!canSave || form.processing"
                         @click="submit"
