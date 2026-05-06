@@ -31,6 +31,8 @@ class SesiAbsensi extends Model
     protected function casts(): array
     {
         return [
+            'jadwal_id' => 'integer',
+            'dosen_id' => 'integer',
             'tanggal' => 'date',
             'dibuka_at' => 'datetime',
             'ditutup_at' => 'datetime',

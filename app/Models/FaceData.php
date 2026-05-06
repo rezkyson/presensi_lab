@@ -18,6 +18,7 @@ class FaceData extends Model
     protected function casts(): array
     {
         return [
+            'mahasiswa_id' => 'integer',
             'face_descriptor' => 'array',
         ];
     }

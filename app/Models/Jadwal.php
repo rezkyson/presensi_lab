@@ -28,6 +28,8 @@ class Jadwal extends Model
     protected function casts(): array
     {
         return [
+            'kelas_id' => 'integer',
+            'dosen_id' => 'integer',
             'jam_mulai' => 'datetime:H:i',
             'jam_selesai' => 'datetime:H:i',
         ];

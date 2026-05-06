@@ -22,6 +22,13 @@ class Dosen extends Model
         'bidang_studi',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

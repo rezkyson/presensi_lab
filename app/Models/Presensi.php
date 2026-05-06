@@ -33,6 +33,8 @@ class Presensi extends Model
     protected function casts(): array
     {
         return [
+            'sesi_id' => 'integer',
+            'mahasiswa_id' => 'integer',
             'timestamp' => 'datetime',
         ];
     }

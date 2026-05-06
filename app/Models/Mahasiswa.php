@@ -28,6 +28,7 @@ class Mahasiswa extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
             'angkatan' => 'integer',
             'wajah_terdaftar' => 'boolean',
         ];

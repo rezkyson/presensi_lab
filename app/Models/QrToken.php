@@ -17,6 +17,7 @@ class QrToken extends Model
     protected function casts(): array
     {
         return [
+            'sesi_id' => 'integer',
             'expired_at' => 'datetime',
             'used_count' => 'integer',
         ];
