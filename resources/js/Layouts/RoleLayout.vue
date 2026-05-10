@@ -212,14 +212,14 @@ const logout = () => {
 
             <main
                 class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:px-6 lg:pb-8 lg:pt-2 lg:[scrollbar-width:thin]"
-                :class="mobileNavigation ? 'pb-5 lg:pb-8' : ''"
+                :class="mobileNavigation ? 'pb-32 lg:pb-8' : ''"
             >
                 <slot />
             </main>
 
             <nav
                 v-if="mobileNavigation"
-                class="ios-bottom-safe mx-auto mb-5 grid w-[calc(100%-2rem)] max-w-md grid-cols-5 gap-1 rounded-lg border border-black/5 bg-white/85 p-2 shadow-apple-card backdrop-blur-2xl lg:hidden"
+                class="ios-fixed-bottom-nav fixed inset-x-0 z-40 mx-auto grid w-[calc(100%-2rem)] max-w-md grid-cols-5 gap-1 rounded-lg border border-black/5 bg-white/85 p-2 shadow-apple-card backdrop-blur-2xl lg:hidden"
             >
                     <Link
                         v-for="item in navigation"
