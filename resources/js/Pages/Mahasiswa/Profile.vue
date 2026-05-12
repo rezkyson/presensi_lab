@@ -6,7 +6,8 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 
 let faceapi = null;
 let detectionIntervalId = null;
-let modelsLoadingPromise = null;
+let detectionModelLoadingPromise = null;
+let captureModelsLoadingPromise = null;
 
 const props = defineProps({
     profile: {
@@ -22,7 +23,8 @@ const props = defineProps({
 const videoRef = ref(null);
 const canvasRef = ref(null);
 const stream = ref(null);
-const modelsLoaded = ref(false);
+const detectionModelLoaded = ref(false);
+const captureModelsLoaded = ref(false);
 const cameraActive = ref(false);
 const statusMessage = ref('');
 const previewImage = ref(null);
@@ -45,7 +47,7 @@ const registrationStatus = computed(() => props.profile.wajah_terdaftar ? 'Terda
 const canSave = computed(() => form.image_base64 && form.face_descriptor.length === props.faceConfig.descriptorLength);
 const hasCapturedFace = computed(() => Boolean(previewImage.value && canSave.value));
 const secureCameraContext = computed(() => window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname));
-const canCapture = computed(() => cameraActive.value && modelsLoaded.value && faceQuality.value.canCapture && !captureProcessing.value);
+const canCapture = computed(() => cameraActive.value && detectionModelLoaded.value && faceQuality.value.canCapture && !captureProcessing.value);
 const qualityReady = computed(() => faceQuality.value.status === 'ready');
 
 const captureButtonLabel = computed(() => {
@@ -112,36 +114,76 @@ const getFaceApi = async () => {
     return faceapi;
 };
 
-const loadModels = async () => {
-    if (modelsLoaded.value) {
+const createDetectorOptions = (api, inputSize = 224) => new api.TinyFaceDetectorOptions({
+    inputSize,
+    scoreThreshold: 0.5,
+});
+
+const loadDetectionModel = async () => {
+    if (detectionModelLoaded.value) {
         return;
     }
 
-    if (modelsLoadingPromise) {
-        await modelsLoadingPromise;
+    if (detectionModelLoadingPromise) {
+        await detectionModelLoadingPromise;
         return;
     }
 
-    statusMessage.value = 'Memuat model wajah.';
-    modelsLoadingPromise = (async () => {
+    statusMessage.value = 'Memuat model deteksi wajah.';
+    detectionModelLoadingPromise = (async () => {
         const api = await getFaceApi();
-
-        await Promise.all([
-            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
-        ]);
-
-        modelsLoaded.value = true;
+        await api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath);
+        detectionModelLoaded.value = true;
     })();
 
     try {
-        await modelsLoadingPromise;
+        await detectionModelLoadingPromise;
     } finally {
-        if (!modelsLoaded.value) {
-            modelsLoadingPromise = null;
+        if (!detectionModelLoaded.value) {
+            detectionModelLoadingPromise = null;
         }
     }
+};
+
+const loadCaptureModels = async () => {
+    if (captureModelsLoaded.value) {
+        return;
+    }
+
+    if (captureModelsLoadingPromise) {
+        await captureModelsLoadingPromise;
+        return;
+    }
+
+    captureModelsLoadingPromise = (async () => {
+        const api = await getFaceApi();
+
+        await Promise.all([
+            api.nets.faceLandmark68TinyNet.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
+        ]);
+
+        captureModelsLoaded.value = true;
+    })();
+
+    try {
+        await captureModelsLoadingPromise;
+    } finally {
+        if (!captureModelsLoaded.value) {
+            captureModelsLoadingPromise = null;
+        }
+    }
+};
+
+const warmCaptureModels = () => {
+    const warm = () => loadCaptureModels().catch(() => {});
+
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(warm, { timeout: 2500 });
+        return;
+    }
+
+    window.setTimeout(warm, 800);
 };
 
 const startCamera = async () => {
@@ -150,8 +192,8 @@ const startCamera = async () => {
         return;
     }
 
-    const modelsPromise = loadModels();
-    modelsPromise.catch(() => {});
+    const detectionModelPromise = loadDetectionModel();
+    detectionModelPromise.catch(() => {});
     statusMessage.value = 'Mengaktifkan kamera.';
 
     try {
@@ -163,9 +205,10 @@ const startCamera = async () => {
         stream.value = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: 'user',
-                width: { ideal: 720 },
-                height: { ideal: 720 },
+                width: { ideal: 480 },
+                height: { ideal: 480 },
                 aspectRatio: { ideal: 1 },
+                frameRate: { ideal: 15, max: 24 },
             },
             audio: false,
         });
@@ -173,7 +216,7 @@ const startCamera = async () => {
         videoRef.value.srcObject = stream.value;
         await videoRef.value.play();
         cameraActive.value = true;
-        statusMessage.value = modelsLoaded.value ? '' : 'Kamera aktif. Memuat model wajah.';
+        statusMessage.value = detectionModelLoaded.value ? '' : 'Kamera aktif. Memuat model deteksi wajah.';
     } catch (error) {
         if (error?.name === 'NotAllowedError') {
             statusMessage.value = 'Izin kamera ditolak.';
@@ -187,7 +230,7 @@ const startCamera = async () => {
     }
 
     try {
-        await modelsPromise;
+        await detectionModelPromise;
 
         if (!cameraActive.value) {
             return;
@@ -195,13 +238,18 @@ const startCamera = async () => {
 
         statusMessage.value = '';
         startFaceDetection();
+        warmCaptureModels();
     } catch (error) {
-        statusMessage.value = 'Model wajah gagal dimuat. Coba nyalakan ulang kamera.';
+        statusMessage.value = 'Model deteksi wajah gagal dimuat. Coba nyalakan ulang kamera.';
     }
 };
 
 const stopCamera = () => {
     stopFaceDetection();
+    videoRef.value?.pause();
+    if (videoRef.value) {
+        videoRef.value.srcObject = null;
+    }
     stream.value?.getTracks().forEach((track) => track.stop());
     stream.value = null;
     cameraActive.value = false;
@@ -224,7 +272,7 @@ const qualityResult = (status, message, canCapture = false) => ({
 
 const sampleFaceQuality = (video, box) => {
     const canvas = document.createElement('canvas');
-    const size = 96;
+    const size = 72;
     const paddingX = box.width * 0.12;
     const paddingY = box.height * 0.12;
     const sourceX = Math.max(0, box.x - paddingX);
@@ -321,7 +369,7 @@ const evaluateFaceQuality = (detections) => {
 };
 
 const detectFacePresence = async () => {
-    if (!cameraActive.value || !videoRef.value || !modelsLoaded.value || detectingFace.value || captureProcessing.value) {
+    if (!cameraActive.value || !videoRef.value || !detectionModelLoaded.value || detectingFace.value || captureProcessing.value || document.visibilityState === 'hidden') {
         return;
     }
 
@@ -331,7 +379,7 @@ const detectFacePresence = async () => {
         const api = await getFaceApi();
         const detections = await api.detectAllFaces(
             videoRef.value,
-            new api.SsdMobilenetv1Options({ minConfidence: 0.5 }),
+            createDetectorOptions(api),
         );
 
         faceQuality.value = evaluateFaceQuality(detections);
@@ -347,7 +395,7 @@ const startFaceDetection = () => {
     faceCount.value = null;
     faceQuality.value = qualityResult('searching', 'Mencari wajah di kamera.');
     detectFacePresence();
-    detectionIntervalId = window.setInterval(detectFacePresence, 900);
+    detectionIntervalId = window.setInterval(detectFacePresence, 1400);
 };
 
 const stopFaceDetection = () => {
@@ -358,8 +406,8 @@ const stopFaceDetection = () => {
 };
 
 const captureFace = async () => {
-    if (!videoRef.value || !modelsLoaded.value) {
-        statusMessage.value = 'Model wajah belum siap.';
+    if (!videoRef.value || !detectionModelLoaded.value) {
+        statusMessage.value = 'Model deteksi wajah belum siap.';
         return;
     }
 
@@ -368,13 +416,16 @@ const captureFace = async () => {
     }
 
     captureProcessing.value = true;
-    statusMessage.value = 'Mendeteksi wajah.';
-    const api = await getFaceApi();
+    statusMessage.value = captureModelsLoaded.value ? 'Mendeteksi wajah.' : 'Menyiapkan model pengenal wajah.';
 
     try {
+        await loadCaptureModels();
+        statusMessage.value = 'Mendeteksi wajah.';
+
+        const api = await getFaceApi();
         const detections = await api
-            .detectAllFaces(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-            .withFaceLandmarks()
+            .detectAllFaces(videoRef.value, createDetectorOptions(api, 320))
+            .withFaceLandmarks(true)
             .withFaceDescriptors();
 
         faceCount.value = detections.length;
@@ -400,8 +451,9 @@ const captureFace = async () => {
         const sourceSize = Math.min(videoRef.value.videoWidth, videoRef.value.videoHeight);
         const sourceX = (videoRef.value.videoWidth - sourceSize) / 2;
         const sourceY = (videoRef.value.videoHeight - sourceSize) / 2;
-        canvas.width = sourceSize;
-        canvas.height = sourceSize;
+        const targetSize = Math.min(sourceSize, 640);
+        canvas.width = targetSize;
+        canvas.height = targetSize;
         canvas.getContext('2d').drawImage(
             videoRef.value,
             sourceX,
@@ -410,11 +462,11 @@ const captureFace = async () => {
             sourceSize,
             0,
             0,
-            sourceSize,
-            sourceSize,
+            targetSize,
+            targetSize,
         );
 
-        const image = canvas.toDataURL('image/jpeg', 0.9);
+        const image = canvas.toDataURL('image/jpeg', 0.82);
         const descriptor = Array.from(detections[0].descriptor);
 
         samples.value = [...samples.value, descriptor].slice(-3);
@@ -422,6 +474,8 @@ const captureFace = async () => {
         form.face_descriptor = averageDescriptor(samples.value);
         previewImage.value = image;
         statusMessage.value = 'Foto wajah sudah siap. Tekan Simpan wajah untuk menyelesaikan pendaftaran.';
+    } catch {
+        statusMessage.value = 'Model pengenal wajah gagal dimuat atau wajah gagal diproses. Coba nyalakan ulang kamera.';
     } finally {
         captureProcessing.value = false;
     }

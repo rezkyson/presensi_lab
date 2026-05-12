@@ -6,7 +6,8 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { Camera, CheckCircle2, RotateCcw, ScanFace, Square } from 'lucide-vue-next';
 
 let faceapi = null;
-let modelsLoadingPromise = null;
+let detectionModelsLoadingPromise = null;
+let recognitionModelLoadingPromise = null;
 let descriptorLoadingPromise = null;
 
 const props = defineProps({
@@ -34,7 +35,8 @@ const props = defineProps({
 
 const videoRef = ref(null);
 const stream = ref(null);
-const modelsLoaded = ref(false);
+const detectionModelsLoaded = ref(false);
+const recognitionModelLoaded = ref(false);
 const cameraActive = ref(false);
 const processing = ref(false);
 const statusMessage = ref('');
@@ -54,8 +56,8 @@ let livenessTimeoutId = null;
 let livenessExpiryTimeoutId = null;
 
 const secureCameraContext = computed(() => window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname));
-const LIVENESS_CHECK_INTERVAL = 180;
-const LIVENESS_CALIBRATION_SAMPLES = 5;
+const LIVENESS_CHECK_INTERVAL = 450;
+const LIVENESS_CALIBRATION_SAMPLES = 3;
 const TURN_DELTA_THRESHOLD = 0.1;
 const livenessLabels = {
     mouth_open: 'Buka mulut',
@@ -77,36 +79,76 @@ const getFaceApi = async () => {
     return faceapi;
 };
 
-const loadModels = async () => {
-    if (modelsLoaded.value) {
+const createDetectorOptions = (api, inputSize = 224) => new api.TinyFaceDetectorOptions({
+    inputSize,
+    scoreThreshold: 0.5,
+});
+
+const loadDetectionModels = async () => {
+    if (detectionModelsLoaded.value) {
         return;
     }
 
-    if (modelsLoadingPromise) {
-        await modelsLoadingPromise;
+    if (detectionModelsLoadingPromise) {
+        await detectionModelsLoadingPromise;
         return;
     }
 
-    statusMessage.value = 'Memuat model wajah.';
-    modelsLoadingPromise = (async () => {
+    statusMessage.value = 'Memuat model deteksi wajah.';
+    detectionModelsLoadingPromise = (async () => {
         const api = await getFaceApi();
 
         await Promise.all([
-            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
+            api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceLandmark68TinyNet.loadFromUri(props.faceConfig.modelPath),
         ]);
 
-        modelsLoaded.value = true;
+        detectionModelsLoaded.value = true;
     })();
 
     try {
-        await modelsLoadingPromise;
+        await detectionModelsLoadingPromise;
     } finally {
-        if (!modelsLoaded.value) {
-            modelsLoadingPromise = null;
+        if (!detectionModelsLoaded.value) {
+            detectionModelsLoadingPromise = null;
         }
     }
+};
+
+const loadRecognitionModel = async () => {
+    if (recognitionModelLoaded.value) {
+        return;
+    }
+
+    if (recognitionModelLoadingPromise) {
+        await recognitionModelLoadingPromise;
+        return;
+    }
+
+    recognitionModelLoadingPromise = (async () => {
+        const api = await getFaceApi();
+        await api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath);
+        recognitionModelLoaded.value = true;
+    })();
+
+    try {
+        await recognitionModelLoadingPromise;
+    } finally {
+        if (!recognitionModelLoaded.value) {
+            recognitionModelLoadingPromise = null;
+        }
+    }
+};
+
+const warmRecognitionModel = () => {
+    const warm = () => loadRecognitionModel().catch(() => {});
+
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(warm, { timeout: 2500 });
+        return;
+    }
+
+    window.setTimeout(warm, 800);
 };
 
 const loadRegisteredDescriptor = async () => {
@@ -318,7 +360,11 @@ const completeLivenessStep = () => {
 };
 
 const runLivenessCheck = async () => {
-    if (!cameraActive.value || processing.value || livenessPassed.value) {
+    if (!cameraActive.value || processing.value || livenessPassed.value || document.visibilityState === 'hidden') {
+        if (cameraActive.value && !livenessPassed.value) {
+            scheduleLivenessCheck();
+        }
+
         return;
     }
 
@@ -332,8 +378,8 @@ const runLivenessCheck = async () => {
     try {
         const api = await getFaceApi();
         const detection = await api
-            .detectSingleFace(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-            .withFaceLandmarks();
+            .detectSingleFace(videoRef.value, createDetectorOptions(api))
+            .withFaceLandmarks(true);
 
         if (!detection) {
             livenessMessage.value = 'Wajah tidak terdeteksi untuk liveness.';
@@ -378,9 +424,9 @@ const startCamera = async () => {
         return;
     }
 
-    const modelsPromise = loadModels();
+    const detectionModelsPromise = loadDetectionModels();
     const descriptorPromise = loadRegisteredDescriptor();
-    modelsPromise.catch(() => {});
+    detectionModelsPromise.catch(() => {});
     descriptorPromise.catch(() => {});
     statusMessage.value = 'Mengaktifkan kamera.';
 
@@ -393,9 +439,10 @@ const startCamera = async () => {
         stream.value = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: 'user',
-                width: { ideal: 720 },
-                height: { ideal: 720 },
+                width: { ideal: 480 },
+                height: { ideal: 480 },
                 aspectRatio: { ideal: 1 },
+                frameRate: { ideal: 15, max: 24 },
             },
             audio: false,
         });
@@ -403,7 +450,7 @@ const startCamera = async () => {
         videoRef.value.srcObject = stream.value;
         await videoRef.value.play();
         cameraActive.value = true;
-        statusMessage.value = modelsLoaded.value && registeredDescriptor.value
+        statusMessage.value = detectionModelsLoaded.value && registeredDescriptor.value
             ? 'Kamera aktif. Selesaikan liveness terlebih dahulu.'
             : 'Kamera aktif. Memuat data wajah.';
     } catch (error) {
@@ -419,7 +466,7 @@ const startCamera = async () => {
     }
 
     try {
-        await Promise.all([modelsPromise, descriptorPromise]);
+        await Promise.all([detectionModelsPromise, descriptorPromise]);
 
         if (!cameraActive.value) {
             return;
@@ -427,15 +474,20 @@ const startCamera = async () => {
 
         statusMessage.value = 'Kamera aktif. Selesaikan liveness terlebih dahulu.';
         startLivenessChallenge();
+        warmRecognitionModel();
     } catch (error) {
         errorMessage.value = (!error.response && error.request)
             ? 'Koneksi terputus saat memuat data wajah.'
-            : 'Model wajah atau descriptor tersimpan gagal dimuat.';
+            : 'Model deteksi wajah atau descriptor tersimpan gagal dimuat.';
     }
 };
 
 const stopCamera = () => {
     clearLivenessLoop();
+    videoRef.value?.pause();
+    if (videoRef.value) {
+        videoRef.value.srcObject = null;
+    }
     stream.value?.getTracks().forEach((track) => track.stop());
     stream.value = null;
     cameraActive.value = false;
@@ -453,13 +505,16 @@ const verifyFace = async () => {
 
     processing.value = true;
     errorMessage.value = '';
-    statusMessage.value = 'Mendeteksi wajah.';
+    statusMessage.value = recognitionModelLoaded.value ? 'Mendeteksi wajah.' : 'Menyiapkan model pengenal wajah.';
 
     try {
+        await loadRecognitionModel();
+        statusMessage.value = 'Mendeteksi wajah.';
+
         const api = await getFaceApi();
         const detections = await api
-            .detectAllFaces(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-            .withFaceLandmarks()
+            .detectAllFaces(videoRef.value, createDetectorOptions(api, 320))
+            .withFaceLandmarks(true)
             .withFaceDescriptors();
 
         if (detections.length === 0) {
