@@ -100,7 +100,7 @@ const loadDetectionModels = async () => {
 
         await Promise.all([
             api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceLandmark68TinyNet.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
         ]);
 
         detectionModelsLoaded.value = true;
@@ -379,7 +379,7 @@ const runLivenessCheck = async () => {
         const api = await getFaceApi();
         const detection = await api
             .detectSingleFace(videoRef.value, createDetectorOptions(api))
-            .withFaceLandmarks(true);
+            .withFaceLandmarks();
 
         if (!detection) {
             livenessMessage.value = 'Wajah tidak terdeteksi untuk liveness.';
@@ -514,7 +514,7 @@ const verifyFace = async () => {
         const api = await getFaceApi();
         const detections = await api
             .detectAllFaces(videoRef.value, createDetectorOptions(api, 320))
-            .withFaceLandmarks(true)
+            .withFaceLandmarks()
             .withFaceDescriptors();
 
         if (detections.length === 0) {

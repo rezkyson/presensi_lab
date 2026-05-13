@@ -159,7 +159,7 @@ const loadCaptureModels = async () => {
         const api = await getFaceApi();
 
         await Promise.all([
-            api.nets.faceLandmark68TinyNet.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
             api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
         ]);
 
@@ -425,7 +425,7 @@ const captureFace = async () => {
         const api = await getFaceApi();
         const detections = await api
             .detectAllFaces(videoRef.value, createDetectorOptions(api, 320))
-            .withFaceLandmarks(true)
+            .withFaceLandmarks()
             .withFaceDescriptors();
 
         faceCount.value = detections.length;
