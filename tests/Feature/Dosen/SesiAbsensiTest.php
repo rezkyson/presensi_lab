@@ -244,6 +244,35 @@ class SesiAbsensiTest extends TestCase
         $this->assertNotSame('old-token', QrToken::first()->token);
     }
 
+    public function test_qr_data_refresh_auto_closes_session_after_schedule_end(): void
+    {
+        [$user, $dosen, $jadwal] = $this->createDosenSchedule();
+        $sesi = SesiAbsensi::factory()->create([
+            'jadwal_id' => $jadwal->id,
+            'dosen_id' => $dosen->id,
+            'tanggal' => CarbonImmutable::today(),
+            'status' => SesiAbsensi::STATUS_AKTIF,
+        ]);
+        QrToken::query()->create([
+            'sesi_id' => $sesi->id,
+            'token' => 'active-token',
+            'expired_at' => now()->addMinutes(5),
+        ]);
+
+        CarbonImmutable::setTestNow('2026-05-04 09:41:00');
+
+        $this->actingAs($user)
+            ->getJson("/dosen/sesi/{$sesi->id}/qr-data")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Sesi absensi sudah ditutup.');
+
+        $this->assertDatabaseHas('sesi_absensi', [
+            'id' => $sesi->id,
+            'status' => SesiAbsensi::STATUS_SELESAI,
+        ]);
+        $this->assertDatabaseCount('qr_tokens', 0);
+    }
+
     public function test_dosen_can_close_session_and_mark_missing_students_absent(): void
     {
         [$user, $dosen, $jadwal, $kelas] = $this->createDosenSchedule();

@@ -7,6 +7,7 @@ use App\Models\Dosen;
 use App\Models\Mahasiswa;
 use App\Models\Presensi;
 use App\Models\SesiAbsensi;
+use App\Services\SesiAbsensiFinalizer;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,9 +17,14 @@ use Inertia\Response;
 
 class MonitorPresensiController extends Controller
 {
+    public function __construct(private readonly SesiAbsensiFinalizer $finalizer)
+    {
+    }
+
     public function index(Request $request): Response
     {
         $dosen = $this->currentDosen($request);
+        $this->finalizer->finalizeEndedForDosen($dosen);
 
         $sessions = SesiAbsensi::query()
             ->with(['jadwal.kelas:id,nama_kelas,prodi'])
@@ -36,6 +42,7 @@ class MonitorPresensiController extends Controller
     public function show(Request $request, SesiAbsensi $sesi): Response
     {
         $this->authorizeSession($request, $sesi);
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
 
         $sesi->load(['jadwal.kelas:id,nama_kelas,prodi,semester,tahun_akademik']);
 
@@ -51,6 +58,7 @@ class MonitorPresensiController extends Controller
     public function attendance(Request $request, SesiAbsensi $sesi): JsonResponse
     {
         $this->authorizeSession($request, $sesi);
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
 
         return response()->json([
             'attendance' => $this->attendanceData($sesi),
@@ -60,6 +68,7 @@ class MonitorPresensiController extends Controller
     public function updateAttendanceStatus(Request $request, SesiAbsensi $sesi, Mahasiswa $mahasiswa): JsonResponse
     {
         $this->authorizeSession($request, $sesi);
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
         $sesi->loadMissing('jadwal.kelas');
 
         if ($sesi->status !== SesiAbsensi::STATUS_SELESAI) {

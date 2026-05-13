@@ -157,6 +157,27 @@ class QrScanTest extends TestCase
             ->assertJsonValidationErrors('qr_payload');
     }
 
+    public function test_qr_is_rejected_and_session_is_closed_after_schedule_end(): void
+    {
+        [$user, , $sesi, $token] = $this->createActiveSessionForMahasiswa();
+
+        CarbonImmutable::setTestNow('2026-05-04 09:41:00');
+        $token->update(['expired_at' => now()->addMinute()]);
+
+        $this->actingAs($user)
+            ->postJson('/mahasiswa/absen/verifikasi-qr', [
+                'qr_payload' => $this->payloadFor($token),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('qr_payload');
+
+        $this->assertDatabaseHas('sesi_absensi', [
+            'id' => $sesi->id,
+            'status' => SesiAbsensi::STATUS_SELESAI,
+        ]);
+        $this->assertDatabaseCount('qr_tokens', 0);
+    }
+
     public function test_mahasiswa_outside_class_cannot_verify_qr(): void
     {
         [$user, , , $token] = $this->createActiveSessionForMahasiswa(attachMahasiswa: false);

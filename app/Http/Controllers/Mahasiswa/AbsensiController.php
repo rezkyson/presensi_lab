@@ -10,6 +10,7 @@ use App\Models\Mahasiswa;
 use App\Models\Presensi;
 use App\Models\QrToken;
 use App\Models\SesiAbsensi;
+use App\Services\SesiAbsensiFinalizer;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
@@ -31,11 +32,23 @@ class AbsensiController extends Controller
 
     private const LIVENESS_STEPS = ['mouth_open', 'turn_left'];
 
+    public function __construct(private readonly SesiAbsensiFinalizer $finalizer)
+    {
+    }
+
     public function index(Request $request): Response
     {
         $mahasiswa = $this->currentMahasiswa($request);
         $today = CarbonImmutable::today();
         $kelasIds = $mahasiswa->kelas()->pluck('kelas.id');
+
+        SesiAbsensi::query()
+            ->with('jadwal')
+            ->where('status', SesiAbsensi::STATUS_AKTIF)
+            ->whereDate('tanggal', $today)
+            ->whereHas('jadwal', fn ($query) => $query->whereIn('kelas_id', $kelasIds))
+            ->get()
+            ->each(fn (SesiAbsensi $sesi) => $this->finalizer->finalizeIfScheduleEnded($sesi));
 
         $activeSessions = SesiAbsensi::query()
             ->with(['jadwal.kelas:id,nama_kelas,prodi', 'jadwal.dosen.user:id,name'])
@@ -94,6 +107,7 @@ class AbsensiController extends Controller
         }
 
         $sesi = $qrToken->sesiAbsensi;
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
 
         if ($sesi->status !== SesiAbsensi::STATUS_AKTIF || ! $sesi->tanggal?->isSameDay(CarbonImmutable::today())) {
             $this->invalidQr($request, $mahasiswa, 'Sesi absensi tidak aktif.', [
@@ -164,6 +178,17 @@ class AbsensiController extends Controller
         $sesi = SesiAbsensi::query()
             ->with(['jadwal.kelas:id,nama_kelas,prodi', 'jadwal.dosen.user:id,name'])
             ->findOrFail($verification['sesi_id']);
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
+
+        if ($sesi->status !== SesiAbsensi::STATUS_AKTIF) {
+            $request->session()->forget('attendance_qr');
+            $request->session()->forget('attendance_liveness');
+
+            return redirect()
+                ->route('mahasiswa.absen.index')
+                ->with('error', 'Sesi absensi sudah berakhir.');
+        }
+
         $livenessChallenge = $this->createLivenessChallenge($request);
 
         return Inertia::render('Mahasiswa/Absen/VerifyFace', [
@@ -199,6 +224,7 @@ class AbsensiController extends Controller
         $sesi = SesiAbsensi::query()
             ->with(['jadwal.kelas:id,nama_kelas,prodi', 'jadwal.dosen.user:id,name'])
             ->findOrFail($verification['sesi_id']);
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
 
         if ($sesi->status !== SesiAbsensi::STATUS_AKTIF || ! $sesi->tanggal?->isSameDay(CarbonImmutable::today())) {
             $request->session()->forget('attendance_qr');

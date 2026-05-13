@@ -102,6 +102,49 @@ class MonitorPresensiTest extends TestCase
         ]);
     }
 
+    public function test_monitor_auto_closes_ended_active_session_and_allows_manual_verification(): void
+    {
+        [$user, , $sesi, , $mahasiswa] = $this->createSessionWithParticipants();
+
+        CarbonImmutable::setTestNow('2026-05-04 09:41:00');
+
+        $this->actingAs($user)
+            ->get("/dosen/sesi/{$sesi->id}/monitor")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dosen/Monitor/Show')
+                ->where('session.status', SesiAbsensi::STATUS_SELESAI)
+                ->where('attendance.summary.belum_hadir', 0)
+                ->where('attendance.summary.tidak_hadir', 1)
+            );
+
+        $this->assertDatabaseHas('sesi_absensi', [
+            'id' => $sesi->id,
+            'status' => SesiAbsensi::STATUS_SELESAI,
+        ]);
+        $this->assertDatabaseHas('presensi', [
+            'sesi_id' => $sesi->id,
+            'mahasiswa_id' => $mahasiswa[3]->id,
+            'status' => Presensi::STATUS_TIDAK_HADIR,
+            'metode' => 'auto_close',
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson("/dosen/sesi/{$sesi->id}/kehadiran/{$mahasiswa[3]->id}", [
+                'status' => Presensi::STATUS_IZIN,
+            ])
+            ->assertOk()
+            ->assertJsonPath('attendance.summary.izin', 2)
+            ->assertJsonPath('attendance.summary.tidak_hadir', 0);
+
+        $this->assertDatabaseHas('presensi', [
+            'sesi_id' => $sesi->id,
+            'mahasiswa_id' => $mahasiswa[3]->id,
+            'status' => Presensi::STATUS_IZIN,
+            'metode' => 'manual_dosen',
+        ]);
+    }
+
     public function test_dosen_cannot_finalize_unattended_participant_before_session_closed(): void
     {
         [$user, , $sesi, , $mahasiswa] = $this->createSessionWithParticipants();

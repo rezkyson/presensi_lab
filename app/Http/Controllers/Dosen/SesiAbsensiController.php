@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Dosen;
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use App\Models\Jadwal;
-use App\Models\Presensi;
 use App\Models\QrToken;
 use App\Models\SesiAbsensi;
+use App\Services\SesiAbsensiFinalizer;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Endroid\QrCode\Builder\Builder;
@@ -25,9 +25,15 @@ use Inertia\Response;
 
 class SesiAbsensiController extends Controller
 {
+    public function __construct(private readonly SesiAbsensiFinalizer $finalizer)
+    {
+    }
+
     public function index(Request $request): Response
     {
         $dosen = $this->currentDosen($request);
+        $this->finalizer->finalizeEndedForDosen($dosen);
+
         $today = CarbonImmutable::today();
         $todayName = $this->indonesianDayName($today);
 
@@ -64,6 +70,7 @@ class SesiAbsensiController extends Controller
     public function store(Request $request, Jadwal $jadwal): RedirectResponse
     {
         $dosen = $this->currentDosen($request);
+        $this->finalizer->finalizeEndedForDosen($dosen);
 
         abort_unless($jadwal->dosen_id === $dosen->id, 403);
 
@@ -115,6 +122,7 @@ class SesiAbsensiController extends Controller
     public function qr(Request $request, SesiAbsensi $sesi): Response
     {
         $this->authorizeSession($request, $sesi);
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
 
         abort_unless($sesi->status === SesiAbsensi::STATUS_AKTIF, 404);
 
@@ -134,6 +142,7 @@ class SesiAbsensiController extends Controller
     public function qrData(Request $request, SesiAbsensi $sesi): JsonResponse
     {
         $this->authorizeSession($request, $sesi);
+        $sesi = $this->finalizer->finalizeIfScheduleEnded($sesi);
 
         if ($sesi->status !== SesiAbsensi::STATUS_AKTIF) {
             return response()->json([
@@ -149,30 +158,7 @@ class SesiAbsensiController extends Controller
     public function destroy(Request $request, SesiAbsensi $sesi): RedirectResponse
     {
         $this->authorizeSession($request, $sesi);
-
-        DB::transaction(function () use ($sesi) {
-            $sesi->load('jadwal.kelas.mahasiswa:id');
-
-            foreach ($sesi->jadwal?->kelas?->mahasiswa ?? collect() as $mahasiswa) {
-                Presensi::query()->firstOrCreate(
-                    [
-                        'sesi_id' => $sesi->id,
-                        'mahasiswa_id' => $mahasiswa->id,
-                    ],
-                    [
-                        'status' => Presensi::STATUS_TIDAK_HADIR,
-                        'timestamp' => now(),
-                        'metode' => 'auto_close',
-                    ],
-                );
-            }
-
-            $sesi->qrTokens()->delete();
-            $sesi->update([
-                'status' => SesiAbsensi::STATUS_SELESAI,
-                'ditutup_at' => now(),
-            ]);
-        });
+        $this->finalizer->finalize($sesi);
 
         return redirect()
             ->route('dosen.sesi.index')
