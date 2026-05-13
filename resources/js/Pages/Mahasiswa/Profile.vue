@@ -3,11 +3,13 @@ import MahasiswaLayout from '@/Layouts/MahasiswaLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { Camera, ScanFace, Save, Square } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref } from 'vue';
+import { useAdaptiveCamera } from '@/Composables/useAdaptiveCamera';
 
 let faceapi = null;
 let detectionIntervalId = null;
 let detectionModelLoadingPromise = null;
 let captureModelsLoadingPromise = null;
+let realtimeDetector = 'tiny';
 
 const props = defineProps({
     profile: {
@@ -37,6 +39,7 @@ const faceQuality = ref({
     message: '',
     status: 'idle',
 });
+const adaptiveCamera = useAdaptiveCamera();
 
 const form = useForm({
     image_base64: '',
@@ -114,10 +117,14 @@ const getFaceApi = async () => {
     return faceapi;
 };
 
-const createDetectorOptions = (api, inputSize = 224) => new api.TinyFaceDetectorOptions({
-    inputSize,
-    scoreThreshold: 0.5,
-});
+const createDetectorOptions = (api, inputSize = adaptiveCamera.profile.value.detectorInputSize) => (
+    realtimeDetector === 'ssd'
+        ? new api.SsdMobilenetv1Options({ minConfidence: 0.5 })
+        : new api.TinyFaceDetectorOptions({
+            inputSize,
+            scoreThreshold: 0.5,
+        })
+);
 
 const loadDetectionModel = async () => {
     if (detectionModelLoaded.value) {
@@ -132,7 +139,15 @@ const loadDetectionModel = async () => {
     statusMessage.value = 'Memuat model deteksi wajah.';
     detectionModelLoadingPromise = (async () => {
         const api = await getFaceApi();
-        await api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath);
+
+        try {
+            await api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath);
+            realtimeDetector = 'tiny';
+        } catch {
+            await api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath);
+            realtimeDetector = 'ssd';
+        }
+
         detectionModelLoaded.value = true;
     })();
 
@@ -176,25 +191,16 @@ const loadCaptureModels = async () => {
     }
 };
 
-const warmCaptureModels = () => {
-    const warm = () => loadCaptureModels().catch(() => {});
-
-    if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(warm, { timeout: 2500 });
+const startCamera = async () => {
+    if (cameraActive.value) {
         return;
     }
 
-    window.setTimeout(warm, 800);
-};
-
-const startCamera = async () => {
     if (!secureCameraContext.value) {
         statusMessage.value = 'Akses kamera membutuhkan HTTPS atau localhost.';
         return;
     }
 
-    const detectionModelPromise = loadDetectionModel();
-    detectionModelPromise.catch(() => {});
     statusMessage.value = 'Mengaktifkan kamera.';
 
     try {
@@ -203,35 +209,22 @@ const startCamera = async () => {
             return;
         }
 
-        stream.value = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'user',
-                width: { ideal: 480 },
-                height: { ideal: 480 },
-                aspectRatio: { ideal: 1 },
-                frameRate: { ideal: 15, max: 24 },
-            },
-            audio: false,
-        });
-
+        stream.value = await adaptiveCamera.openCameraStream();
         videoRef.value.srcObject = stream.value;
-        await videoRef.value.play();
-        cameraActive.value = true;
-        statusMessage.value = detectionModelLoaded.value ? '' : 'Kamera aktif. Memuat model deteksi wajah.';
-    } catch (error) {
-        if (error?.name === 'NotAllowedError') {
-            statusMessage.value = 'Izin kamera ditolak.';
-        } else if (error?.name === 'NotFoundError') {
-            statusMessage.value = 'Kamera tidak tersedia.';
-        } else {
-            statusMessage.value = 'Kamera gagal dibuka.';
+        try {
+            await videoRef.value.play();
+        } catch {
+            // Some mobile browsers resolve the camera stream but reject play briefly.
         }
-
+        cameraActive.value = true;
+        statusMessage.value = 'Kamera aktif. Memuat model deteksi wajah.';
+    } catch (error) {
+        statusMessage.value = adaptiveCamera.cameraErrorMessage(error);
         return;
     }
 
     try {
-        await detectionModelPromise;
+        await loadDetectionModel();
 
         if (!cameraActive.value) {
             return;
@@ -239,7 +232,6 @@ const startCamera = async () => {
 
         statusMessage.value = '';
         startFaceDetection();
-        warmCaptureModels();
     } catch (error) {
         statusMessage.value = 'Model deteksi wajah gagal dimuat. Coba nyalakan ulang kamera.';
     }
@@ -273,7 +265,7 @@ const qualityResult = (status, message, canCapture = false) => ({
 
 const sampleFaceQuality = (video, box) => {
     const canvas = document.createElement('canvas');
-    const size = 72;
+    const size = adaptiveCamera.profile.value.qualitySampleSize;
     const paddingX = box.width * 0.12;
     const paddingY = box.height * 0.12;
     const sourceX = Math.max(0, box.x - paddingX);
@@ -378,12 +370,18 @@ const detectFacePresence = async () => {
 
     try {
         const api = await getFaceApi();
+        const startedAt = performance.now();
         const detections = await api.detectAllFaces(
             videoRef.value,
             createDetectorOptions(api),
         );
+        const downgraded = adaptiveCamera.recordDetection(performance.now() - startedAt);
 
         faceQuality.value = evaluateFaceQuality(detections);
+
+        if (downgraded && cameraActive.value) {
+            startFaceDetection();
+        }
     } catch {
         statusMessage.value = 'Deteksi wajah gagal. Coba nyalakan ulang kamera.';
     } finally {
@@ -396,7 +394,7 @@ const startFaceDetection = () => {
     faceCount.value = null;
     faceQuality.value = qualityResult('searching', 'Mencari wajah di kamera.');
     detectFacePresence();
-    detectionIntervalId = window.setInterval(detectFacePresence, 1400);
+    detectionIntervalId = window.setInterval(detectFacePresence, adaptiveCamera.profile.value.detectionIntervalMs);
 };
 
 const stopFaceDetection = () => {
@@ -452,7 +450,7 @@ const captureFace = async () => {
         const sourceSize = Math.min(videoRef.value.videoWidth, videoRef.value.videoHeight);
         const sourceX = (videoRef.value.videoWidth - sourceSize) / 2;
         const sourceY = (videoRef.value.videoHeight - sourceSize) / 2;
-        const targetSize = Math.min(sourceSize, 640);
+        const targetSize = Math.min(sourceSize, adaptiveCamera.profile.value.captureSize);
         canvas.width = targetSize;
         canvas.height = targetSize;
         canvas.getContext('2d').drawImage(
@@ -467,7 +465,7 @@ const captureFace = async () => {
             targetSize,
         );
 
-        const image = canvas.toDataURL('image/jpeg', 0.82);
+        const image = canvas.toDataURL('image/jpeg', adaptiveCamera.profile.value.jpegQuality);
         const descriptor = Array.from(detections[0].descriptor);
 
         samples.value = [...samples.value, descriptor].slice(-3);

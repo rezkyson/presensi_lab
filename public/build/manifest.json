@@ -1,141 +1,148 @@
 {
-  "_AdminLayout-nbPtriAh.js": {
-    "file": "assets/AdminLayout-nbPtriAh.js",
+  "_AdminLayout-Xair4vvS.js": {
+    "file": "assets/AdminLayout-Xair4vvS.js",
     "name": "AdminLayout",
     "imports": [
-      "_RoleLayout-d3ig60IC.js",
+      "_RoleLayout-CcHhzTuo.js",
       "resources/js/app.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
-  "_DosenLayout-CzPC_VDJ.js": {
-    "file": "assets/DosenLayout-CzPC_VDJ.js",
+  "_DosenLayout-jNcudsCG.js": {
+    "file": "assets/DosenLayout-jNcudsCG.js",
     "name": "DosenLayout",
     "imports": [
-      "_RoleLayout-d3ig60IC.js",
+      "_RoleLayout-CcHhzTuo.js",
       "resources/js/app.js",
-      "_chart-column-DOBqkcKs.js"
+      "_chart-column-BY674G5h.js"
     ]
   },
-  "_MahasiswaLayout-CxnY8Ijf.js": {
-    "file": "assets/MahasiswaLayout-CxnY8Ijf.js",
+  "_MahasiswaLayout-Bi3Z2tPD.js": {
+    "file": "assets/MahasiswaLayout-Bi3Z2tPD.js",
     "name": "MahasiswaLayout",
     "imports": [
-      "_RoleLayout-d3ig60IC.js",
+      "_RoleLayout-CcHhzTuo.js",
       "resources/js/app.js",
-      "_calendar-days-4xRDJ2h7.js"
+      "_calendar-days-DCkn0rzW.js"
     ]
   },
-  "_RoleLayout-d3ig60IC.js": {
-    "file": "assets/RoleLayout-d3ig60IC.js",
+  "_RoleLayout-CcHhzTuo.js": {
+    "file": "assets/RoleLayout-CcHhzTuo.js",
     "name": "RoleLayout",
     "imports": [
       "resources/js/app.js",
-      "_book-open-check-BcHzq3eH.js"
+      "_book-open-check-YCdn54RJ.js"
     ]
   },
-  "_activity-B9DEHViG.js": {
-    "file": "assets/activity-B9DEHViG.js",
+  "_activity-B9ty_J0u.js": {
+    "file": "assets/activity-B9ty_J0u.js",
     "name": "activity",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_book-open-check-BcHzq3eH.js": {
-    "file": "assets/book-open-check-BcHzq3eH.js",
+  "_book-open-check-YCdn54RJ.js": {
+    "file": "assets/book-open-check-YCdn54RJ.js",
     "name": "book-open-check",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_calendar-days-4xRDJ2h7.js": {
-    "file": "assets/calendar-days-4xRDJ2h7.js",
+  "_calendar-days-DCkn0rzW.js": {
+    "file": "assets/calendar-days-DCkn0rzW.js",
     "name": "calendar-days",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_camera-DUxYmOfx.js": {
-    "file": "assets/camera-DUxYmOfx.js",
+  "_camera-BIxBBjic.js": {
+    "file": "assets/camera-BIxBBjic.js",
     "name": "camera",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_chart-column-DOBqkcKs.js": {
-    "file": "assets/chart-column-DOBqkcKs.js",
+  "_chart-column-BY674G5h.js": {
+    "file": "assets/chart-column-BY674G5h.js",
     "name": "chart-column",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_clock-DJNE6nAz.js": {
-    "file": "assets/clock-DJNE6nAz.js",
+  "_clock-B27q2w5j.js": {
+    "file": "assets/clock-B27q2w5j.js",
     "name": "clock",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_external-link-D9vB9c5T.js": {
-    "file": "assets/external-link-D9vB9c5T.js",
+  "_external-link-CBrfIeJB.js": {
+    "file": "assets/external-link-CBrfIeJB.js",
     "name": "external-link",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_eye-CCHXME8S.js": {
-    "file": "assets/eye-CCHXME8S.js",
+  "_eye-BSQL-Bzd.js": {
+    "file": "assets/eye-BSQL-Bzd.js",
     "name": "eye",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_file-spreadsheet-YTTEdX10.js": {
-    "file": "assets/file-spreadsheet-YTTEdX10.js",
+  "_file-spreadsheet-hvShHInd.js": {
+    "file": "assets/file-spreadsheet-hvShHInd.js",
     "name": "file-spreadsheet",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_plus-CLZfl2Io.js": {
-    "file": "assets/plus-CLZfl2Io.js",
+  "_plus-BqhmxYJB.js": {
+    "file": "assets/plus-BqhmxYJB.js",
     "name": "plus",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_refresh-cw-bCkRagLY.js": {
-    "file": "assets/refresh-cw-bCkRagLY.js",
+  "_refresh-cw-Cbbq41FT.js": {
+    "file": "assets/refresh-cw-Cbbq41FT.js",
     "name": "refresh-cw",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_rotate-ccw-D0pb3u3G.js": {
-    "file": "assets/rotate-ccw-D0pb3u3G.js",
+  "_rotate-ccw-BBZfvzy0.js": {
+    "file": "assets/rotate-ccw-BBZfvzy0.js",
     "name": "rotate-ccw",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_scan-line-BMTFdVrm.js": {
-    "file": "assets/scan-line-BMTFdVrm.js",
+  "_scan-line-Btrsl2xp.js": {
+    "file": "assets/scan-line-Btrsl2xp.js",
     "name": "scan-line",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_search-C4eepRf0.js": {
-    "file": "assets/search-C4eepRf0.js",
+  "_search-6bdw7JQx.js": {
+    "file": "assets/search-6bdw7JQx.js",
     "name": "search",
     "imports": [
       "resources/js/app.js"
     ]
   },
-  "_square-Hzh5Fwdl.js": {
-    "file": "assets/square-Hzh5Fwdl.js",
+  "_square-BA0nejhs.js": {
+    "file": "assets/square-BA0nejhs.js",
     "name": "square",
+    "imports": [
+      "resources/js/app.js"
+    ]
+  },
+  "_useAdaptiveCamera-Ba11nh2q.js": {
+    "file": "assets/useAdaptiveCamera-Ba11nh2q.js",
+    "name": "useAdaptiveCamera",
     "imports": [
       "resources/js/app.js"
     ]
@@ -147,498 +154,500 @@
     "isDynamicEntry": true
   },
   "resources/js/Pages/Admin/Dashboard.vue": {
-    "file": "assets/Dashboard-D2LCpPe3.js",
+    "file": "assets/Dashboard-DZfS3mfy.js",
     "name": "Dashboard",
     "src": "resources/js/Pages/Admin/Dashboard.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Dosen/Create.vue": {
-    "file": "assets/Create-o0NnJpKT.js",
+    "file": "assets/Create-CGCSM6ga.js",
     "name": "Create",
     "src": "resources/js/Pages/Admin/Dosen/Create.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Dosen/Edit.vue": {
-    "file": "assets/Edit-DQkhsBB2.js",
+    "file": "assets/Edit-Biu7Nq0j.js",
     "name": "Edit",
     "src": "resources/js/Pages/Admin/Dosen/Edit.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Dosen/Index.vue": {
-    "file": "assets/Index-JC1k7pGF.js",
+    "file": "assets/Index-Fb_-JA9M.js",
     "name": "Index",
     "src": "resources/js/Pages/Admin/Dosen/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_plus-CLZfl2Io.js",
-      "_search-C4eepRf0.js",
-      "_rotate-ccw-D0pb3u3G.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_plus-BqhmxYJB.js",
+      "_search-6bdw7JQx.js",
+      "_rotate-ccw-BBZfvzy0.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Jadwal/Create.vue": {
-    "file": "assets/Create-WCYGSfrj.js",
+    "file": "assets/Create-Bv0Qm7_T.js",
     "name": "Create",
     "src": "resources/js/Pages/Admin/Jadwal/Create.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Jadwal/Edit.vue": {
-    "file": "assets/Edit-DG9iHhb1.js",
+    "file": "assets/Edit-O8D2KOii.js",
     "name": "Edit",
     "src": "resources/js/Pages/Admin/Jadwal/Edit.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Jadwal/Index.vue": {
-    "file": "assets/Index-BAq2PgmV.js",
+    "file": "assets/Index-BR_TaOU1.js",
     "name": "Index",
     "src": "resources/js/Pages/Admin/Jadwal/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_plus-CLZfl2Io.js",
-      "_search-C4eepRf0.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_plus-BqhmxYJB.js",
+      "_search-6bdw7JQx.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Kelas/Create.vue": {
-    "file": "assets/Create-Crpqysd_.js",
+    "file": "assets/Create-4V7qk1m-.js",
     "name": "Create",
     "src": "resources/js/Pages/Admin/Kelas/Create.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Kelas/Edit.vue": {
-    "file": "assets/Edit-Br6UnDzX.js",
+    "file": "assets/Edit-BjE69B3n.js",
     "name": "Edit",
     "src": "resources/js/Pages/Admin/Kelas/Edit.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Kelas/Index.vue": {
-    "file": "assets/Index-CkCRBTxH.js",
+    "file": "assets/Index-wN30oxbi.js",
     "name": "Index",
     "src": "resources/js/Pages/Admin/Kelas/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_plus-CLZfl2Io.js",
-      "_search-C4eepRf0.js",
-      "_eye-CCHXME8S.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_plus-BqhmxYJB.js",
+      "_search-6bdw7JQx.js",
+      "_eye-BSQL-Bzd.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Kelas/Show.vue": {
-    "file": "assets/Show-t9fsfmiq.js",
+    "file": "assets/Show-D514TquI.js",
     "name": "Show",
     "src": "resources/js/Pages/Admin/Kelas/Show.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Mahasiswa/Create.vue": {
-    "file": "assets/Create-SjGNhAHg.js",
+    "file": "assets/Create-C8WHuvIb.js",
     "name": "Create",
     "src": "resources/js/Pages/Admin/Mahasiswa/Create.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Mahasiswa/Edit.vue": {
-    "file": "assets/Edit-DRn0hN-7.js",
+    "file": "assets/Edit-CTilIMom.js",
     "name": "Edit",
     "src": "resources/js/Pages/Admin/Mahasiswa/Edit.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Mahasiswa/Index.vue": {
-    "file": "assets/Index-BBm143pU.js",
+    "file": "assets/Index-CjYcT998.js",
     "name": "Index",
     "src": "resources/js/Pages/Admin/Mahasiswa/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_plus-CLZfl2Io.js",
-      "_search-C4eepRf0.js",
-      "_rotate-ccw-D0pb3u3G.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_plus-BqhmxYJB.js",
+      "_search-6bdw7JQx.js",
+      "_rotate-ccw-BBZfvzy0.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Rekap/Index.vue": {
-    "file": "assets/Index-CYH64r0U.js",
+    "file": "assets/Index-lLu6IePd.js",
     "name": "Index",
     "src": "resources/js/Pages/Admin/Rekap/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_file-spreadsheet-YTTEdX10.js",
-      "_search-C4eepRf0.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_file-spreadsheet-hvShHInd.js",
+      "_search-6bdw7JQx.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Ruangan/Create.vue": {
-    "file": "assets/Create-C9Cwrrna.js",
+    "file": "assets/Create-Ba4q1J2T.js",
     "name": "Create",
     "src": "resources/js/Pages/Admin/Ruangan/Create.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Ruangan/Edit.vue": {
-    "file": "assets/Edit-BNDhTzza.js",
+    "file": "assets/Edit-BrsqXDsG.js",
     "name": "Edit",
     "src": "resources/js/Pages/Admin/Ruangan/Edit.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Admin/Ruangan/Index.vue": {
-    "file": "assets/Index-A87y41tO.js",
+    "file": "assets/Index-tNRpWbuV.js",
     "name": "Index",
     "src": "resources/js/Pages/Admin/Ruangan/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_AdminLayout-nbPtriAh.js",
-      "_plus-CLZfl2Io.js",
-      "_search-C4eepRf0.js",
-      "_rotate-ccw-D0pb3u3G.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_chart-column-DOBqkcKs.js"
+      "_AdminLayout-Xair4vvS.js",
+      "_plus-BqhmxYJB.js",
+      "_search-6bdw7JQx.js",
+      "_rotate-ccw-BBZfvzy0.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Auth/Login.vue": {
-    "file": "assets/Login-Dj5C8pLL.js",
+    "file": "assets/Login-BntyKqj8.js",
     "name": "Login",
     "src": "resources/js/Pages/Auth/Login.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_eye-CCHXME8S.js"
+      "_book-open-check-YCdn54RJ.js",
+      "_eye-BSQL-Bzd.js"
     ]
   },
   "resources/js/Pages/Dosen/Dashboard.vue": {
-    "file": "assets/Dashboard-cSShnGRx.js",
+    "file": "assets/Dashboard-EDXtx2zT.js",
     "name": "Dashboard",
     "src": "resources/js/Pages/Dosen/Dashboard.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_DosenLayout-CzPC_VDJ.js",
-      "_activity-B9DEHViG.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_chart-column-DOBqkcKs.js"
+      "_DosenLayout-jNcudsCG.js",
+      "_activity-B9ty_J0u.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Dosen/Monitor/Index.vue": {
-    "file": "assets/Index-Bix_8KaT.js",
+    "file": "assets/Index-UlF-c9pM.js",
     "name": "Index",
     "src": "resources/js/Pages/Dosen/Monitor/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_DosenLayout-CzPC_VDJ.js",
-      "_clock-DJNE6nAz.js",
-      "_external-link-D9vB9c5T.js",
-      "_activity-B9DEHViG.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_chart-column-DOBqkcKs.js"
+      "_DosenLayout-jNcudsCG.js",
+      "_clock-B27q2w5j.js",
+      "_external-link-CBrfIeJB.js",
+      "_activity-B9ty_J0u.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Dosen/Monitor/Show.vue": {
-    "file": "assets/Show-BVjt0rPV.js",
+    "file": "assets/Show-CmyDUYAt.js",
     "name": "Show",
     "src": "resources/js/Pages/Dosen/Monitor/Show.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_DosenLayout-CzPC_VDJ.js",
-      "_refresh-cw-bCkRagLY.js",
-      "_clock-DJNE6nAz.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_chart-column-DOBqkcKs.js"
+      "_DosenLayout-jNcudsCG.js",
+      "_refresh-cw-Cbbq41FT.js",
+      "_clock-B27q2w5j.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Dosen/Rekap/Index.vue": {
-    "file": "assets/Index-D0acDkUf.js",
+    "file": "assets/Index-Cm_OQquh.js",
     "name": "Index",
     "src": "resources/js/Pages/Dosen/Rekap/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_DosenLayout-CzPC_VDJ.js",
-      "_file-spreadsheet-YTTEdX10.js",
-      "_search-C4eepRf0.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_chart-column-DOBqkcKs.js"
+      "_DosenLayout-jNcudsCG.js",
+      "_file-spreadsheet-hvShHInd.js",
+      "_search-6bdw7JQx.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Dosen/Sesi/Index.vue": {
-    "file": "assets/Index-_bvvZjJG.js",
+    "file": "assets/Index-D25VYaBY.js",
     "name": "Index",
     "src": "resources/js/Pages/Dosen/Sesi/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_DosenLayout-CzPC_VDJ.js",
-      "_clock-DJNE6nAz.js",
-      "_activity-B9DEHViG.js",
-      "_external-link-D9vB9c5T.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_chart-column-DOBqkcKs.js"
+      "_DosenLayout-jNcudsCG.js",
+      "_clock-B27q2w5j.js",
+      "_activity-B9ty_J0u.js",
+      "_external-link-CBrfIeJB.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Dosen/Sesi/Qr.vue": {
-    "file": "assets/Qr-CXlXr1d4.js",
+    "file": "assets/Qr-DBWT__9O.js",
     "name": "Qr",
     "src": "resources/js/Pages/Dosen/Sesi/Qr.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_DosenLayout-CzPC_VDJ.js",
-      "_refresh-cw-bCkRagLY.js",
-      "_activity-B9DEHViG.js",
-      "_square-Hzh5Fwdl.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_chart-column-DOBqkcKs.js"
+      "_DosenLayout-jNcudsCG.js",
+      "_refresh-cw-Cbbq41FT.js",
+      "_activity-B9ty_J0u.js",
+      "_square-BA0nejhs.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_chart-column-BY674G5h.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Absen/Failed.vue": {
-    "file": "assets/Failed-EW_4h2gB.js",
+    "file": "assets/Failed-BzBJtj9z.js",
     "name": "Failed",
     "src": "resources/js/Pages/Mahasiswa/Absen/Failed.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_rotate-ccw-D0pb3u3G.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_rotate-ccw-BBZfvzy0.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Absen/Index.vue": {
-    "file": "assets/Index-NQQo5Z4L.js",
+    "file": "assets/Index-Cn92swrq.js",
     "name": "Index",
     "src": "resources/js/Pages/Mahasiswa/Absen/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_scan-line-BMTFdVrm.js",
-      "_camera-DUxYmOfx.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_scan-line-Btrsl2xp.js",
+      "_camera-BIxBBjic.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Absen/Success.vue": {
-    "file": "assets/Success-DDZqMJ3L.js",
+    "file": "assets/Success-CKccMIB-.js",
     "name": "Success",
     "src": "resources/js/Pages/Mahasiswa/Absen/Success.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Absen/VerifyFace.vue": {
-    "file": "assets/VerifyFace-CgDJ9m3v.js",
+    "file": "assets/VerifyFace-CTxf1QqX.js",
     "name": "VerifyFace",
     "src": "resources/js/Pages/Mahasiswa/Absen/VerifyFace.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_rotate-ccw-D0pb3u3G.js",
-      "_square-Hzh5Fwdl.js",
-      "_camera-DUxYmOfx.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_useAdaptiveCamera-Ba11nh2q.js",
+      "_rotate-ccw-BBZfvzy0.js",
+      "_square-BA0nejhs.js",
+      "_camera-BIxBBjic.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js"
     ],
     "dynamicImports": [
       "node_modules/face-api.js/build/es6/index.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Dashboard.vue": {
-    "file": "assets/Dashboard-c_HX3uby.js",
+    "file": "assets/Dashboard-DmGKnLlv.js",
     "name": "Dashboard",
     "src": "resources/js/Pages/Mahasiswa/Dashboard.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_scan-line-BMTFdVrm.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_scan-line-Btrsl2xp.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Jadwal/Index.vue": {
-    "file": "assets/Index-DPdIxqdG.js",
+    "file": "assets/Index-Bo9pDM_4.js",
     "name": "Index",
     "src": "resources/js/Pages/Mahasiswa/Jadwal/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_clock-DJNE6nAz.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_clock-B27q2w5j.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Profile.vue": {
-    "file": "assets/Profile-B6JrRhim.js",
+    "file": "assets/Profile-DL0mhrSM.js",
     "name": "Profile",
     "src": "resources/js/Pages/Mahasiswa/Profile.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_square-Hzh5Fwdl.js",
-      "_camera-DUxYmOfx.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js",
-      "_calendar-days-4xRDJ2h7.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_useAdaptiveCamera-Ba11nh2q.js",
+      "_square-BA0nejhs.js",
+      "_camera-BIxBBjic.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js",
+      "_calendar-days-DCkn0rzW.js"
     ],
     "dynamicImports": [
       "node_modules/face-api.js/build/es6/index.js"
     ]
   },
   "resources/js/Pages/Mahasiswa/Riwayat/Index.vue": {
-    "file": "assets/Index-_zxQAcjc.js",
+    "file": "assets/Index-DtOXen9t.js",
     "name": "Index",
     "src": "resources/js/Pages/Mahasiswa/Riwayat/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_MahasiswaLayout-CxnY8Ijf.js",
-      "_calendar-days-4xRDJ2h7.js",
-      "_RoleLayout-d3ig60IC.js",
-      "_book-open-check-BcHzq3eH.js"
+      "_MahasiswaLayout-Bi3Z2tPD.js",
+      "_calendar-days-DCkn0rzW.js",
+      "_RoleLayout-CcHhzTuo.js",
+      "_book-open-check-YCdn54RJ.js"
     ]
   },
   "resources/js/Pages/Welcome.vue": {
-    "file": "assets/Welcome-By0JKdDp.js",
+    "file": "assets/Welcome-B39NZMbJ.js",
     "name": "Welcome",
     "src": "resources/js/Pages/Welcome.vue",
     "isDynamicEntry": true,
@@ -647,7 +656,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DEr215ka.js",
+    "file": "assets/app-Bxxs9Y8G.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

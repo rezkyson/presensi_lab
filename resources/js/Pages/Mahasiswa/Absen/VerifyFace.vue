@@ -4,11 +4,13 @@ import MahasiswaLayout from '@/Layouts/MahasiswaLayout.vue';
 import axios from 'axios';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { Camera, CheckCircle2, RotateCcw, ScanFace, Square } from 'lucide-vue-next';
+import { useAdaptiveCamera } from '@/Composables/useAdaptiveCamera';
 
 let faceapi = null;
 let detectionModelsLoadingPromise = null;
 let recognitionModelLoadingPromise = null;
 let descriptorLoadingPromise = null;
+let realtimeDetector = 'tiny';
 
 const props = defineProps({
     session: {
@@ -52,11 +54,11 @@ const livenessDetail = ref('');
 const livenessBaseline = ref(null);
 const neutralSamples = ref([]);
 const activeGesture = ref(null);
+const adaptiveCamera = useAdaptiveCamera();
 let livenessTimeoutId = null;
 let livenessExpiryTimeoutId = null;
 
 const secureCameraContext = computed(() => window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname));
-const LIVENESS_CHECK_INTERVAL = 450;
 const LIVENESS_CALIBRATION_SAMPLES = 3;
 const TURN_DELTA_THRESHOLD = 0.1;
 const livenessLabels = {
@@ -79,10 +81,14 @@ const getFaceApi = async () => {
     return faceapi;
 };
 
-const createDetectorOptions = (api, inputSize = 224) => new api.TinyFaceDetectorOptions({
-    inputSize,
-    scoreThreshold: 0.5,
-});
+const createDetectorOptions = (api, inputSize = adaptiveCamera.profile.value.detectorInputSize) => (
+    realtimeDetector === 'ssd'
+        ? new api.SsdMobilenetv1Options({ minConfidence: 0.5 })
+        : new api.TinyFaceDetectorOptions({
+            inputSize,
+            scoreThreshold: 0.5,
+        })
+);
 
 const loadDetectionModels = async () => {
     if (detectionModelsLoaded.value) {
@@ -98,10 +104,19 @@ const loadDetectionModels = async () => {
     detectionModelsLoadingPromise = (async () => {
         const api = await getFaceApi();
 
-        await Promise.all([
-            api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
-        ]);
+        try {
+            await Promise.all([
+                api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath),
+                api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
+            ]);
+            realtimeDetector = 'tiny';
+        } catch {
+            await Promise.all([
+                api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
+                api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
+            ]);
+            realtimeDetector = 'ssd';
+        }
 
         detectionModelsLoaded.value = true;
     })();
@@ -130,6 +145,7 @@ const loadRecognitionModel = async () => {
 
         await Promise.all([
             api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
             api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
         ]);
 
@@ -143,17 +159,6 @@ const loadRecognitionModel = async () => {
             recognitionModelLoadingPromise = null;
         }
     }
-};
-
-const warmRecognitionModel = () => {
-    const warm = () => loadRecognitionModel().catch(() => {});
-
-    if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(warm, { timeout: 2500 });
-        return;
-    }
-
-    window.setTimeout(warm, 800);
 };
 
 const loadRegisteredDescriptor = async () => {
@@ -211,7 +216,7 @@ const clearLivenessExpiry = () => {
 
 const scheduleLivenessCheck = () => {
     clearLivenessLoop();
-    livenessTimeoutId = window.setTimeout(runLivenessCheck, LIVENESS_CHECK_INTERVAL);
+    livenessTimeoutId = window.setTimeout(runLivenessCheck, adaptiveCamera.profile.value.livenessIntervalMs);
 };
 
 const distance = (left, right) => Math.hypot(left.x - right.x, left.y - right.y);
@@ -382,9 +387,11 @@ const runLivenessCheck = async () => {
 
     try {
         const api = await getFaceApi();
+        const startedAt = performance.now();
         const detection = await api
             .detectSingleFace(videoRef.value, createDetectorOptions(api))
             .withFaceLandmarks();
+        adaptiveCamera.recordDetection(performance.now() - startedAt);
 
         if (!detection) {
             livenessMessage.value = 'Wajah tidak terdeteksi untuk liveness.';
@@ -422,6 +429,10 @@ const startLivenessChallenge = () => {
 };
 
 const startCamera = async () => {
+    if (cameraActive.value) {
+        return;
+    }
+
     errorMessage.value = '';
 
     if (!secureCameraContext.value) {
@@ -429,10 +440,6 @@ const startCamera = async () => {
         return;
     }
 
-    const detectionModelsPromise = loadDetectionModels();
-    const descriptorPromise = loadRegisteredDescriptor();
-    detectionModelsPromise.catch(() => {});
-    descriptorPromise.catch(() => {});
     statusMessage.value = 'Mengaktifkan kamera.';
 
     try {
@@ -441,37 +448,22 @@ const startCamera = async () => {
             return;
         }
 
-        stream.value = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'user',
-                width: { ideal: 480 },
-                height: { ideal: 480 },
-                aspectRatio: { ideal: 1 },
-                frameRate: { ideal: 15, max: 24 },
-            },
-            audio: false,
-        });
-
+        stream.value = await adaptiveCamera.openCameraStream();
         videoRef.value.srcObject = stream.value;
-        await videoRef.value.play();
-        cameraActive.value = true;
-        statusMessage.value = detectionModelsLoaded.value && registeredDescriptor.value
-            ? 'Kamera aktif. Selesaikan liveness terlebih dahulu.'
-            : 'Kamera aktif. Memuat data wajah.';
-    } catch (error) {
-        if (error?.name === 'NotAllowedError') {
-            errorMessage.value = 'Izin kamera ditolak.';
-        } else if (error?.name === 'NotFoundError') {
-            errorMessage.value = 'Kamera tidak tersedia.';
-        } else {
-            errorMessage.value = 'Kamera gagal dibuka.';
+        try {
+            await videoRef.value.play();
+        } catch {
+            // Some mobile browsers resolve the camera stream but reject play briefly.
         }
-
+        cameraActive.value = true;
+        statusMessage.value = 'Kamera aktif. Memuat data wajah.';
+    } catch (error) {
+        errorMessage.value = adaptiveCamera.cameraErrorMessage(error);
         return;
     }
 
     try {
-        await Promise.all([detectionModelsPromise, descriptorPromise]);
+        await Promise.all([loadDetectionModels(), loadRegisteredDescriptor()]);
 
         if (!cameraActive.value) {
             return;
@@ -479,7 +471,6 @@ const startCamera = async () => {
 
         statusMessage.value = 'Kamera aktif. Selesaikan liveness terlebih dahulu.';
         startLivenessChallenge();
-        warmRecognitionModel();
     } catch (error) {
         errorMessage.value = (!error.response && error.request)
             ? 'Koneksi terputus saat memuat data wajah.'
