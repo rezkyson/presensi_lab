@@ -3,6 +3,12 @@
         Options -MultiViews -Indexes
     </IfModule>
 
+    <IfModule mod_headers.c>
+        <FilesMatch "(_model-shard[0-9]+|_model-weights_manifest\.json)$">
+            Header set Cache-Control "public, max-age=604800"
+        </FilesMatch>
+    </IfModule>
+
     RewriteEngine On
 
     # Handle Authorization Header

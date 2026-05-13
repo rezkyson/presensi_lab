@@ -2,7 +2,7 @@
 import MahasiswaLayout from '@/Layouts/MahasiswaLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { Camera, ScanFace, Save, Square } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useAdaptiveCamera } from '@/Composables/useAdaptiveCamera';
 
 let faceapi = null;
@@ -10,6 +10,7 @@ let detectionIntervalId = null;
 let detectionModelLoadingPromise = null;
 let captureModelsLoadingPromise = null;
 let realtimeDetector = 'tiny';
+let captureModelsWarmupScheduled = false;
 
 const props = defineProps({
     profile: {
@@ -27,6 +28,7 @@ const canvasRef = ref(null);
 const stream = ref(null);
 const detectionModelLoaded = ref(false);
 const captureModelsLoaded = ref(false);
+const captureModelsLoading = ref(false);
 const cameraActive = ref(false);
 const statusMessage = ref('');
 const previewImage = ref(null);
@@ -52,6 +54,91 @@ const hasCapturedFace = computed(() => Boolean(previewImage.value && canSave.val
 const secureCameraContext = computed(() => window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname));
 const canCapture = computed(() => cameraActive.value && detectionModelLoaded.value && faceQuality.value.canCapture && !captureProcessing.value);
 const qualityReady = computed(() => faceQuality.value.status === 'ready');
+const cameraGuideTone = computed(() => {
+    if (captureProcessing.value) {
+        return 'bg-zinc-950/88 text-white ring-white/15';
+    }
+
+    if (qualityReady.value) {
+        return 'bg-emerald-600/92 text-white ring-emerald-200/40';
+    }
+
+    if (faceQuality.value.status && !['idle', 'searching'].includes(faceQuality.value.status)) {
+        return 'bg-amber-500/92 text-white ring-amber-200/40';
+    }
+
+    return 'bg-zinc-950/78 text-white ring-white/15';
+});
+const cameraGuideTitle = computed(() => {
+    if (!cameraActive.value) {
+        return 'Kamera belum aktif';
+    }
+
+    if (captureProcessing.value) {
+        return 'Tetap diam';
+    }
+
+    if (!detectionModelLoaded.value) {
+        return 'Menyiapkan deteksi';
+    }
+
+    if (captureModelsLoading.value && !captureProcessing.value) {
+        return 'Menyiapkan pengenal';
+    }
+
+    if (qualityReady.value) {
+        return 'Wajah sudah pas';
+    }
+
+    if (faceQuality.value.status === 'no_face' || faceQuality.value.status === 'searching') {
+        return 'Cari posisi wajah';
+    }
+
+    if (faceQuality.value.status === 'too_small') {
+        return 'Dekatkan wajah';
+    }
+
+    if (faceQuality.value.status === 'off_center') {
+        return 'Geser ke tengah';
+    }
+
+    if (faceQuality.value.status === 'too_dark') {
+        return 'Tambah cahaya';
+    }
+
+    if (faceQuality.value.status === 'blurry') {
+        return 'Tahan stabil';
+    }
+
+    if (faceQuality.value.status === 'multiple_faces') {
+        return 'Satu wajah saja';
+    }
+
+    return 'Hadapkan wajah';
+});
+const cameraGuideDetail = computed(() => {
+    if (!cameraActive.value) {
+        return 'Nyalakan kamera, lalu posisikan wajah di dalam frame.';
+    }
+
+    if (captureProcessing.value) {
+        return 'Jangan bergerak sampai proses selesai.';
+    }
+
+    if (!detectionModelLoaded.value) {
+        return 'Tunggu sebentar, kamera sudah aktif.';
+    }
+
+    if (captureModelsLoading.value && !captureProcessing.value) {
+        return 'Sambil kamu posisikan wajah, sistem menyiapkan pengenal wajah.';
+    }
+
+    if (qualityReady.value) {
+        return 'Tekan Ambil foto wajah, lalu tetap di posisi.';
+    }
+
+    return faceQuality.value.message || 'Pastikan wajah terlihat jelas dan tidak banyak bergerak.';
+});
 
 const captureButtonLabel = computed(() => {
     if (captureProcessing.value) {
@@ -117,6 +204,19 @@ const getFaceApi = async () => {
     return faceapi;
 };
 
+const runWhenIdle = (callback, timeout = 1200) => {
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(callback, { timeout });
+        return;
+    }
+
+    window.setTimeout(callback, 600);
+};
+
+const loadNetIfNeeded = (net, modelPath) => (
+    net.isLoaded ? Promise.resolve() : net.loadFromUri(modelPath)
+);
+
 const createDetectorOptions = (api, inputSize = adaptiveCamera.profile.value.detectorInputSize) => (
     realtimeDetector === 'ssd'
         ? new api.SsdMobilenetv1Options({ minConfidence: 0.5 })
@@ -174,21 +274,41 @@ const loadCaptureModels = async () => {
         const api = await getFaceApi();
 
         await Promise.all([
-            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
+            loadNetIfNeeded(api.nets.ssdMobilenetv1, props.faceConfig.modelPath),
+            loadNetIfNeeded(api.nets.faceLandmark68Net, props.faceConfig.modelPath),
+            loadNetIfNeeded(api.nets.faceRecognitionNet, props.faceConfig.modelPath),
         ]);
 
         captureModelsLoaded.value = true;
     })();
 
     try {
+        captureModelsLoading.value = true;
         await captureModelsLoadingPromise;
     } finally {
         if (!captureModelsLoaded.value) {
             captureModelsLoadingPromise = null;
         }
+        captureModelsLoading.value = false;
     }
+};
+
+const warmCaptureModels = () => {
+    if (captureModelsWarmupScheduled || captureModelsLoaded.value || captureModelsLoadingPromise) {
+        return;
+    }
+
+    captureModelsWarmupScheduled = true;
+    runWhenIdle(() => {
+        if (!cameraActive.value) {
+            captureModelsWarmupScheduled = false;
+            return;
+        }
+
+        loadCaptureModels().catch(() => {
+            captureModelsWarmupScheduled = false;
+        });
+    }, 1800);
 };
 
 const startCamera = async () => {
@@ -232,6 +352,7 @@ const startCamera = async () => {
 
         statusMessage.value = '';
         startFaceDetection();
+        warmCaptureModels();
     } catch (error) {
         statusMessage.value = 'Model deteksi wajah gagal dimuat. Coba nyalakan ulang kamera.';
     }
@@ -502,6 +623,12 @@ const submit = () => {
 onBeforeUnmount(() => {
     stopCamera();
 });
+
+onMounted(() => {
+    runWhenIdle(() => {
+        getFaceApi().catch(() => {});
+    });
+});
 </script>
 
 <template>
@@ -563,9 +690,23 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <div class="mt-5 overflow-hidden rounded-lg bg-zinc-950">
+                    <div class="camera-frame relative mt-5 overflow-hidden rounded-lg bg-zinc-950">
                         <video ref="videoRef" class="aspect-square w-full object-cover" autoplay muted playsinline />
                         <canvas ref="canvasRef" class="hidden" />
+                        <div class="pointer-events-none absolute inset-x-3 bottom-3" aria-live="polite">
+                            <div
+                                class="rounded-lg px-4 py-3 text-sm shadow-lg ring-1 backdrop-blur-sm"
+                                :class="cameraGuideTone"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-current" :class="{ 'animate-pulse': captureProcessing || !detectionModelLoaded }" />
+                                    <div class="min-w-0">
+                                        <p class="font-semibold leading-tight">{{ cameraGuideTitle }}</p>
+                                        <p class="mt-1 text-xs leading-snug text-white/82">{{ cameraGuideDetail }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div

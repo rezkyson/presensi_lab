@@ -2,7 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import MahasiswaLayout from '@/Layouts/MahasiswaLayout.vue';
 import axios from 'axios';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Camera, CheckCircle2, RotateCcw, ScanFace, Square } from 'lucide-vue-next';
 import { useAdaptiveCamera } from '@/Composables/useAdaptiveCamera';
 
@@ -11,6 +11,8 @@ let detectionModelsLoadingPromise = null;
 let recognitionModelLoadingPromise = null;
 let descriptorLoadingPromise = null;
 let realtimeDetector = 'tiny';
+let realtimeLandmarkTiny = true;
+let recognitionModelWarmupScheduled = false;
 
 const props = defineProps({
     session: {
@@ -39,6 +41,7 @@ const videoRef = ref(null);
 const stream = ref(null);
 const detectionModelsLoaded = ref(false);
 const recognitionModelLoaded = ref(false);
+const recognitionModelLoading = ref(false);
 const cameraActive = ref(false);
 const processing = ref(false);
 const statusMessage = ref('');
@@ -72,6 +75,75 @@ const livenessSteps = computed(() => (props.livenessChallenge.steps ?? []).map((
 const currentLivenessStep = computed(() => livenessSteps.value[currentLivenessIndex.value] ?? null);
 const livenessPassed = computed(() => Boolean(livenessCompletedAt.value) && currentLivenessIndex.value >= livenessSteps.value.length);
 const canVerify = computed(() => cameraActive.value && registeredDescriptor.value && livenessPassed.value && !processing.value && attemptsLeft.value > 0);
+const verificationGuideTone = computed(() => {
+    if (processing.value) {
+        return 'bg-zinc-950/88 text-white ring-white/15';
+    }
+
+    if (livenessPassed.value) {
+        return 'bg-emerald-600/92 text-white ring-emerald-200/40';
+    }
+
+    if (errorMessage.value) {
+        return 'bg-rose-600/92 text-white ring-rose-200/40';
+    }
+
+    return 'bg-zinc-950/78 text-white ring-white/15';
+});
+const verificationGuideTitle = computed(() => {
+    if (!cameraActive.value) {
+        return 'Kamera belum aktif';
+    }
+
+    if (processing.value) {
+        return 'Jangan bergerak';
+    }
+
+    if (!detectionModelsLoaded.value || !registeredDescriptor.value) {
+        return 'Menyiapkan verifikasi';
+    }
+
+    if (recognitionModelLoading.value && !processing.value) {
+        return 'Menyiapkan pengenal';
+    }
+
+    if (livenessPassed.value) {
+        return 'Siap verifikasi';
+    }
+
+    if (currentLivenessStep.value) {
+        return currentLivenessStep.value.label;
+    }
+
+    return 'Hadapkan wajah';
+});
+const verificationGuideDetail = computed(() => {
+    if (!cameraActive.value) {
+        return 'Nyalakan kamera depan, lalu posisikan wajah di tengah frame.';
+    }
+
+    if (processing.value) {
+        return 'Tetap di posisi sampai hasil verifikasi muncul.';
+    }
+
+    if (!detectionModelsLoaded.value || !registeredDescriptor.value) {
+        return 'Tunggu sebentar. Jangan tutup halaman.';
+    }
+
+    if (recognitionModelLoading.value && !processing.value) {
+        return 'Model pengenal disiapkan sambil kamu menyelesaikan instruksi.';
+    }
+
+    if (livenessPassed.value) {
+        return 'Tekan Verifikasi, tatap kamera, dan jangan bergerak.';
+    }
+
+    if (livenessMessage.value) {
+        return livenessMessage.value;
+    }
+
+    return 'Ikuti instruksi gerakan wajah secara pelan dan jelas.';
+});
 
 const getFaceApi = async () => {
     if (!faceapi) {
@@ -80,6 +152,19 @@ const getFaceApi = async () => {
 
     return faceapi;
 };
+
+const runWhenIdle = (callback, timeout = 1200) => {
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(callback, { timeout });
+        return;
+    }
+
+    window.setTimeout(callback, 600);
+};
+
+const loadNetIfNeeded = (net, modelPath) => (
+    net.isLoaded ? Promise.resolve() : net.loadFromUri(modelPath)
+);
 
 const createDetectorOptions = (api, inputSize = adaptiveCamera.profile.value.detectorInputSize) => (
     realtimeDetector === 'ssd'
@@ -106,16 +191,18 @@ const loadDetectionModels = async () => {
 
         try {
             await Promise.all([
-                api.nets.tinyFaceDetector.loadFromUri(props.faceConfig.modelPath),
-                api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
+                loadNetIfNeeded(api.nets.tinyFaceDetector, props.faceConfig.modelPath),
+                loadNetIfNeeded(api.nets.faceLandmark68TinyNet, props.faceConfig.modelPath),
             ]);
             realtimeDetector = 'tiny';
+            realtimeLandmarkTiny = true;
         } catch {
             await Promise.all([
-                api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
-                api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
+                loadNetIfNeeded(api.nets.ssdMobilenetv1, props.faceConfig.modelPath),
+                loadNetIfNeeded(api.nets.faceLandmark68Net, props.faceConfig.modelPath),
             ]);
             realtimeDetector = 'ssd';
+            realtimeLandmarkTiny = false;
         }
 
         detectionModelsLoaded.value = true;
@@ -144,21 +231,41 @@ const loadRecognitionModel = async () => {
         const api = await getFaceApi();
 
         await Promise.all([
-            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
-            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
+            loadNetIfNeeded(api.nets.ssdMobilenetv1, props.faceConfig.modelPath),
+            loadNetIfNeeded(api.nets.faceLandmark68Net, props.faceConfig.modelPath),
+            loadNetIfNeeded(api.nets.faceRecognitionNet, props.faceConfig.modelPath),
         ]);
 
         recognitionModelLoaded.value = true;
     })();
 
     try {
+        recognitionModelLoading.value = true;
         await recognitionModelLoadingPromise;
     } finally {
         if (!recognitionModelLoaded.value) {
             recognitionModelLoadingPromise = null;
         }
+        recognitionModelLoading.value = false;
     }
+};
+
+const warmRecognitionModel = () => {
+    if (recognitionModelWarmupScheduled || recognitionModelLoaded.value || recognitionModelLoadingPromise) {
+        return;
+    }
+
+    recognitionModelWarmupScheduled = true;
+    runWhenIdle(() => {
+        if (!cameraActive.value) {
+            recognitionModelWarmupScheduled = false;
+            return;
+        }
+
+        loadRecognitionModel().catch(() => {
+            recognitionModelWarmupScheduled = false;
+        });
+    }, 1800);
 };
 
 const loadRegisteredDescriptor = async () => {
@@ -390,7 +497,7 @@ const runLivenessCheck = async () => {
         const startedAt = performance.now();
         const detection = await api
             .detectSingleFace(videoRef.value, createDetectorOptions(api))
-            .withFaceLandmarks();
+            .withFaceLandmarks(realtimeLandmarkTiny);
         adaptiveCamera.recordDetection(performance.now() - startedAt);
 
         if (!detection) {
@@ -471,6 +578,7 @@ const startCamera = async () => {
 
         statusMessage.value = 'Kamera aktif. Selesaikan liveness terlebih dahulu.';
         startLivenessChallenge();
+        warmRecognitionModel();
     } catch (error) {
         errorMessage.value = (!error.response && error.request)
             ? 'Koneksi terputus saat memuat data wajah.'
@@ -575,6 +683,12 @@ const verifyFace = async () => {
 onBeforeUnmount(() => {
     stopCamera();
 });
+
+onMounted(() => {
+    runWhenIdle(() => {
+        getFaceApi().catch(() => {});
+    });
+});
 </script>
 
 <template>
@@ -630,8 +744,22 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <div class="mt-5 overflow-hidden rounded-lg bg-zinc-950">
+                    <div class="camera-frame relative mt-5 overflow-hidden rounded-lg bg-zinc-950">
                         <video ref="videoRef" class="aspect-square w-full object-cover" autoplay muted playsinline />
+                        <div class="pointer-events-none absolute inset-x-3 bottom-3" aria-live="polite">
+                            <div
+                                class="rounded-lg px-4 py-3 text-sm shadow-lg ring-1 backdrop-blur-sm"
+                                :class="verificationGuideTone"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-current" :class="{ 'animate-pulse': processing || !livenessPassed }" />
+                                    <div class="min-w-0">
+                                        <p class="font-semibold leading-tight">{{ verificationGuideTitle }}</p>
+                                        <p class="mt-1 text-xs leading-snug text-white/82">{{ verificationGuideDetail }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
