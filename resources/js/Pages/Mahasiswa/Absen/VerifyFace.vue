@@ -127,7 +127,12 @@ const loadRecognitionModel = async () => {
 
     recognitionModelLoadingPromise = (async () => {
         const api = await getFaceApi();
-        await api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath);
+
+        await Promise.all([
+            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
+            api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
+        ]);
+
         recognitionModelLoaded.value = true;
     })();
 
@@ -513,7 +518,7 @@ const verifyFace = async () => {
 
         const api = await getFaceApi();
         const detections = await api
-            .detectAllFaces(videoRef.value, createDetectorOptions(api, 320))
+            .detectAllFaces(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
             .withFaceLandmarks()
             .withFaceDescriptors();
 

@@ -159,6 +159,7 @@ const loadCaptureModels = async () => {
         const api = await getFaceApi();
 
         await Promise.all([
+            api.nets.ssdMobilenetv1.loadFromUri(props.faceConfig.modelPath),
             api.nets.faceLandmark68Net.loadFromUri(props.faceConfig.modelPath),
             api.nets.faceRecognitionNet.loadFromUri(props.faceConfig.modelPath),
         ]);
@@ -424,7 +425,7 @@ const captureFace = async () => {
 
         const api = await getFaceApi();
         const detections = await api
-            .detectAllFaces(videoRef.value, createDetectorOptions(api, 320))
+            .detectAllFaces(videoRef.value, new api.SsdMobilenetv1Options({ minConfidence: 0.5 }))
             .withFaceLandmarks()
             .withFaceDescriptors();
 
@@ -474,8 +475,9 @@ const captureFace = async () => {
         form.face_descriptor = averageDescriptor(samples.value);
         previewImage.value = image;
         statusMessage.value = 'Foto wajah sudah siap. Tekan Simpan wajah untuk menyelesaikan pendaftaran.';
-    } catch {
-        statusMessage.value = 'Model pengenal wajah gagal dimuat atau wajah gagal diproses. Coba nyalakan ulang kamera.';
+    } catch (error) {
+        const detail = error?.message ? ` Detail: ${error.message}` : '';
+        statusMessage.value = `Model pengenal wajah gagal dimuat atau wajah gagal diproses. Coba nyalakan ulang kamera.${detail}`;
     } finally {
         captureProcessing.value = false;
     }
